@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>PLERA — Sovereign Micro‑Host + Embedder v1.1</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<style>
+:root{
+  --parchment:#f7f3ea; --parchment-soft:#f5efe3; --parchment-deep:#f0e9dc;
+  --gold:#d9b878; --gold-soft:#e8d5a4; --gold-deep:#b89252; --gold-ember:#7a5a28;
+  --ink:#0b1020; --ink-soft:#091020; --ink-deep:#020414;
+  --radius:14px; --shadow:0 10px 24px rgba(0,0,0,.12);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:linear-gradient(144deg,var(--parchment),var(--parchment-soft));color:var(--ink);font-family:Georgia,"Segoe UI",serif;line-height:1.44}
+.app{display:grid;grid-template-columns:260px 1fr;gap:14px;min-height:100vh}
+.sidebar{background:var(--parchment-deep);padding:21px 12px;border-right:1px solid var(--gold-soft)}
+.brand{padding:12px;border:1px solid var(--gold-soft);border-radius:14px;background:var(--parchment-soft);box-shadow:var(--shadow);margin-bottom:14px}
+.brand .t{font-size:18px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-deep)}
+.small{font-size:12px;color:var(--ink-soft)}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:11px;border:1px solid var(--gold-deep);background:var(--gold);color:var(--ink-deep);cursor:pointer}
+.btn.secondary{background:var(--parchment-soft);border-color:var(--gold-soft)}
+.btn.danger{background:#e07a5f;border-color:#c0523b;color:white}
+.stack{display:flex;flex-direction:column;gap:9px}
+.tab{padding:8px 10px;border:1px solid var(--gold-soft);border-radius:11px;background:#fffdf7;cursor:pointer}
+.tab.active{outline:2px solid var(--gold-deep)}
+.main{padding:21px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.pill{padding:4px 9px;border-radius:999px;background:var(--parchment-soft);border:1px solid var(--gold-soft);font-size:12px;color:var(--ink-soft)}
+.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}
+.panel{background:var(--parchment-soft);border:1px solid var(--gold-soft);border-radius:14px;box-shadow:var(--shadow);padding:14px}
+.panel h3{margin:0 0 6px;font-size:18px;color:var(--ink-deep)}
+.row{display:flex;gap:9px;align-items:center}
+.input, textarea{width:100%;border:1px solid var(--gold-soft);border-radius:11px;background:#fff;padding:9px 10px;font-family:inherit;font-size:14px;color:var(--ink)}
+textarea{min-height:120px;resize:vertical}
+.small-help{font-size:12px;color:var(--ink-soft)}
+hr{border:none;border-top:1px solid var(--parchment-deep);margin:12px 0}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:9px;align-items:center}
+.list{display:flex;flex-direction:column;gap:7px}
+.page-pill{display:flex;align-items:center;justify-content:space-between;background:#fffdf7;border:1px solid var(--gold-soft);border-radius:11px;padding:7px 9px}
+.preview{background:#fff;border:1px solid var(--gold-soft);border-radius:11px;min-height:240px;padding:12px;overflow:auto}
+.code{white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;background:#fff;border:1px dashed var(--gold-soft);border-radius:11px;padding:10px;font-size:12px;color:#333}
+.notice{font-size:12px;color:var(--ink-soft)}
+.router-url{font-family:ui-monospace,Menlo,Consolas,monospace}
+
+/* EMBEDDER */
+.embed-workbench{display:grid;grid-template-columns:1fr;gap:14px}
+.app-pill{display:flex;align-items:center;justify-content:space-between;background:#fffdf7;border:1px solid var(--gold-soft);border-radius:11px;padding:7px 9px}
+.sandbox-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:9px}
+.sandbox-flag{display:flex;gap:7px;align-items:center;font-size:13px}
+.box{position:relative;border:1px solid var(--gold-soft);border-radius:11px;background:#fff}
+.box-head{display:flex;align-items:center;justify-content:space-between;padding:6px 9px;border-bottom:1px solid var(--parchment-deep);background:var(--parchment-deep);cursor:move;border-top-left-radius:11px;border-top-right-radius:11px}
+.box-title{font-size:14px}
+.box-body{position:relative}
+.box iframe{width:100%;height:360px;border:0;display:block;border-bottom-left-radius:11px;border-bottom-right-radius:11px}
+.resizer{position:absolute;width:16px;height:16px;right:2px;bottom:2px;cursor:nwse-resize;background:linear-gradient(45deg,transparent 50%,var(--gold) 50%);border-radius:4px}
+.warn{color:#a3472a;font-size:12px}
+@media(max-width:980px){.app{grid-template-columns:1fr}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="t">PLERA Sovereign Kit</div>
+      <div class="small">Micro‑Host + Embedder · local‑only</div>
+    </div>
+
+    <div class="stack">
+      <div class="tab active" id="tabHostBtn">Sovereign Micro‑Host</div>
+      <div class="tab" id="tabEmbedBtn">Sovereign Embedder v1.1</div>
+    </div>
+
+    <hr/>
+    <div class="stack">
+      <button class="btn secondary" id="exportAllBtn">Export JSON</button>
+      <label class="btn secondary" style="cursor:pointer">
+        Import JSON<input id="importAllInput" type="file" accept=".json" style="display:none">
+      </label>
+      <div class="small">Data stays in this browser (localStorage).</div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <div class="row" style="gap:12px">
+          <div class="pill">Node Online</div>
+          $1
+          <div class="pill" id="bridgePill">Bridge: Idle<\/div>
+        </div>
+        <div class="small">Shareable route: <span class="router-url" id="routePreview">—</span></div>
+      </div>
+      <div class="row">
+        <button class="btn secondary" id="copyUrlBtn">Copy URL</button>
+      </div>
+    </div>
+
+    <!-- ===== MICRO‑HOST ===== -->
+    <section id="hostSection">
+      <div class="grid">
+        <!-- EDITOR -->
+        <section class="panel" id="editorPanel" data-numerica-ignore>
+          <h3>Site Editor</h3>
+          <div class="row" style="justify-content:space-between;margin-bottom:6px">
+            <div class="small">Sites</div>
+            <button class="btn secondary" id="addSiteBtn">+ New</button>
+          </div>
+          <div id="siteList" class="list" style="margin-bottom:8px"></div>
+
+          <div class="kv">
+            <label>Account / Slug</label><input id="siteSlug" class="input" placeholder="e.g., artistjenny" />
+            <label>Title</label><input id="siteTitle" class="input" placeholder="Public site title" />
+            <label>Description</label><input id="siteDesc" class="input" placeholder="Short description" />
+            <label>Theme</label>
+            <select id="siteTheme" class="input">
+              <option value="parchment">Parchment</option>
+              <option value="midnight">Midnight</option>
+              <option value="onyx">Onyx</option>
+            </select>
+          </div>
+          <hr/>
+          <div class="row" style="justify-content:space-between">
+            <strong>Pages</strong>
+            <button class="btn secondary" id="addPageBtn">+ Page</button>
+          </div>
+          <div id="pageList" class="list"></div>
+          <hr/>
+          <div class="kv">
+            <label>Page Slug</label><input id="pageSlug" class="input" placeholder="home, about, gallery" />
+            <label>Page HTML</label><textarea id="pageHtml" placeholder="Write raw HTML for this page…"></textarea>
+          </div>
+          <div class="row" style="justify-content:flex-end;gap:9px;margin-top:8px">
+            <button class="btn secondary" id="savePageBtn">Save Page</button>
+            <button class="btn" id="saveSiteBtn">Save Site</button>
+            <button class="btn" id="bundleBtn">Generate Static Bundle</button>
+            <button class="btn danger" id="deleteSiteBtn">Delete Site</button>
+          </div>
+          <div class="notice">Routing: <code>#/s/&lt;slug&gt;/&lt;page&gt;</code> (e.g., <code>#/s/artistjenny/home</code>). Use after any host URL (Wix/GitHub Pages).</div>
+        </section>
+
+        <!-- PREVIEW -->
+        <section class="panel">
+          <h3>Preview</h3>
+          <div id="preview" class="preview"><em>Save a site and choose a page to see live preview.</em></div>
+          <hr/>
+          <h3>Route Inspector</h3>
+          <div class="code" id="routeInfo">—</div>
+        </section>
+      </div>
+    </section>
+
+    <!-- ===== EMBEDDER ===== -->
+    <section id="embedSection" style="display:none">
+      <section class="panel" data-numerica-ignore>
+        <h3>Embedder — Apps</h3>
+        <div class="row" style="justify-content:space-between;margin-bottom:6px">
+          <div class="small">Registered Apps</div>
+          <button class="btn secondary" id="addAppBtn">+ New App</button>
+        </div>
+        <div id="appList" class="list"></div>
+      </section>
+
+      <section class="panel" data-numerica-ignore>
+        <h3>App Editor</h3>
+        <div class="kv">
+          <label>Name</label><input id="appName" class="input" placeholder="e.g., Prose Sandbox" />
+          <label>Slug</label><input id="appSlug" class="input" placeholder="prose" />
+        </div>
+        <div class="kv">
+          <label>HTML / JS</label><textarea id="appHtml" placeholder="Paste the app HTML (single-file, vanilla)…"></textarea>
+        </div>
+        <div class="small-help">This HTML will be embedded via <code>&lt;iframe sandbox&gt;</code> as <code>srcdoc</code>. No external calls are made by the embedder itself.</div>
+        <hr/>
+        <strong>Sandbox Flags</strong>
+        <div class="sandbox-grid" style="margin-top:7px">
+          <label class="sandbox-flag"><input type="checkbox" id="flagScripts" checked> allow-scripts</label>
+          <label class="sandbox-flag"><input type="checkbox" id="flagSame" > allow-same-origin <span class="warn">(use only if required)</span></label>
+          <label class="sandbox-flag"><input type="checkbox" id="flagForms" > allow-forms</label>
+          <label class="sandbox-flag"><input type="checkbox" id="flagModals"> allow-modals</label>
+          <label class="sandbox-flag"><input type="checkbox" id="flagDownloads"> allow-downloads</label>
+          <label class="sandbox-flag"><input type="checkbox" id="flagPopups"> allow-popups</label>
+        </div>
+        <div class="row" style="justify-content:flex-end;gap:9px;margin-top:8px">
+          <button class="btn secondary" id="saveAppBtn">Save App</button>
+          <button class="btn" id="viewAppBtn">View Now</button>
+          <button class="btn" id="shellBtn">Generate Embedder Shell</button>
+          <button class="btn danger" id="deleteAppBtn">Delete App</button>
+        </div>
+        <div class="notice">Routing: <code>#/e/&lt;slug&gt;</code> (e.g., <code>#/e/prose</code>). Opens the app in a sandboxed frame.</div>
+      </section>
+
+      <section class="panel" id="embedPreviewPanel" data-numerica-ignore>
+        <h3>Sandbox Preview (drag / resize / autosize)</h3>
+        <div class="box" id="box">
+          <div class="box-head" id="boxHead">
+            <div class="box-title" id="boxTitle">—</div>
+            <div class="row">
+              <button class="btn secondary" id="autosizeBtn" type="button">Autosize</button>
+              <button class="btn secondary" id="copyEmbedUrlBtn" type="button">Copy Route</button>
+            </div>
+          </div>
+          <div class="box-body">
+            <iframe id="appFrame" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>
+            <div class="resizer" id="resizer" title="Resize"></div>
+          </div>
+        </div>
+        <div class="small-help" style="margin-top:6px">Drag by the header. Size is saved per app. Autosize uses a postMessage bridge injected into the app’s srcdoc.</div>
+      </section>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ===== STATE ===== */
+const KEY="plera_kit_v11"; const $=id=>document.getElementById(id);
+let state = load();
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY))||{sites:[],active:null,apps:[],activeApp:null,frames:{}}; }catch{ return {sites:[],active:null,apps:[],activeApp:null,frames:{}}; } }
+function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+const slugify = s => (s||"").toLowerCase().trim().replace(/[^a-z0-9\-]+/g,'-').replace(/^-+|-+$/g,'')||"site";
+function bySiteId(id){ return state.sites.find(s=>s.id===id); }
+function byAppId(id){ return state.apps.find(a=>a.id===id); }
+
+/* ===== TABS ===== */
+const hostSection=$("hostSection"), embedSection=$("embedSection");
+$("tabHostBtn").onclick=()=>{ hostSection.style.display=''; embedSection.style.display='none'; document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); $("tabHostBtn").classList.add('active'); updateRoutePreview(); };
+$("tabEmbedBtn").onclick=()=>{ hostSection.style.display='none'; embedSection.style.display=''; document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); $("tabEmbedBtn").classList.add('active'); updateEmbedRoutePreview(); };
+
+/* ===== MICRO‑HOST ===== */
+function ensureActiveSite(){ if(!state.active && state.sites[0]) state.active = state.sites[0].id; }
+function siteRoute(slug,page){ return location.origin+location.pathname+"#/s/"+slug+"/"+(page||"home"); }
+
+function renderSites(){
+  const list=$("siteList"); list.innerHTML="";
+  state.sites.forEach(s=>{
+    const div=document.createElement('div'); div.className='page-pill'+(s.id===state.active?' active':'');
+    const left=document.createElement('div'); left.innerHTML = "<strong>"+(s.title||s.slug)+"</strong> <span class='small'>/"+s.slug+"</span>";
+    const right=document.createElement('div');
+    const openBtn=document.createElement('button'); openBtn.className='btn secondary'; openBtn.textContent='Open';
+    openBtn.onclick=()=>{ state.active=s.id; save(); hydrateEditor(); renderSites(); updateRoutePreview(); };
+    right.appendChild(openBtn); div.appendChild(left); div.appendChild(right); list.appendChild(div);
+  });
+  if(!state.sites.length){ list.innerHTML = "<div class='small'>No sites yet. Click <em>+ New</em> to start.</div>"; }
+}
+
+function hydrateEditor(){
+  const s=bySiteId(state.active);
+  $("pageList").innerHTML="";
+  if(!s){ $("siteSlug").value=''; $("siteTitle").value=''; $("siteDesc").value=''; $("siteTheme").value='parchment'; $("preview").innerHTML='<em>Select or create a site.</em>'; $("routeInfo").textContent='—'; return; }
+  $("siteSlug").value = s.slug||''; $("siteTitle").value = s.title||''; $("siteDesc").value = s.desc||''; $("siteTheme").value = s.theme||'parchment';
+  (s.pages||[]).forEach(p=>{
+    const pill=document.createElement('div'); pill.className='page-pill';
+    pill.innerHTML = "<span><strong>"+p.slug+"</strong></span>";
+    const r=document.createElement('div');
+    const view=document.createElement('button'); view.className='btn secondary'; view.textContent='View'; view.onclick=()=>{ previewPage(s.slug,p.slug); };
+    const edit=document.createElement('button'); edit.className='btn secondary'; edit.textContent='Edit'; edit.onclick=()=>{ $("pageSlug").value=p.slug; $("pageHtml").value=p.html; };
+    const del=document.createElement('button'); del.className='btn danger'; del.textContent='×'; del.onclick=()=>{ s.pages=s.pages.filter(x=>x.slug!==p.slug); save(); hydrateEditor(); };
+    r.appendChild(view); r.appendChild(edit); r.appendChild(del); pill.appendChild(r); $("pageList").appendChild(pill);
+  });
+  if(!(s.pages||[]).length) $("pageList").innerHTML='<div class="small">No pages yet.</div>';
+}
+
+function updateRoutePreview(){
+  const s=bySiteId(state.active); $("routePreview").textContent = s? siteRoute(s.slug, (s.pages[0]||{}).slug||'home') : '—';
+}
+
+function previewPage(slug,page){
+  const s=state.sites.find(x=>x.slug===slug); const p=(s?.pages||[]).find(x=>x.slug===page);
+  $("preview").innerHTML = p? p.html : '<em>Page not found.</em>';
+  $("routeInfo").textContent = 'Route: #/s/'+slug+'/'+page+'\nTitle: '+(s?.title||'')+'\nDesc: '+(s?.desc||'');
+}
+
+$("addSiteBtn").onclick=()=>{
+  const title=prompt('Site Title?'); if(!title) return;
+  const slug=slugify(prompt('Account / Slug (used in URL):', slugify(title))||'');
+  const id='site_'+Date.now();
+  state.sites.push({id,slug,title,desc:'',theme:'parchment',pages:[{slug:'home',html:'<h1>'+title+'</h1><p>Welcome.</p>'}]});
+  state.active=id; save(); renderSites(); hydrateEditor(); updateRoutePreview();
+};
+
+$("saveSiteBtn").onclick=()=>{
+  const s=bySiteId(state.active); if(!s) return;
+  s.slug = slugify($("siteSlug").value); s.title = $("siteTitle").value.trim(); s.desc = $("siteDesc").value.trim(); s.theme=$("siteTheme").value;
+  save(); renderSites(); updateRoutePreview(); alert('Site saved.');
+};
+
+$("deleteSiteBtn").onclick=()=>{
+  const s=bySiteId(state.active); if(!s) return; if(!confirm('Delete this site?')) return;
+  state.sites = state.sites.filter(x=>x.id!==s.id); state.active=null; save(); renderSites(); hydrateEditor(); updateRoutePreview();
+};
+
+$("addPageBtn").onclick=()=>{
+  const s=bySiteId(state.active); if(!s) return alert('Create/open a site first.');
+  const slug=slugify(prompt('New page slug (e.g., about, gallery):')||''); if(!slug) return;
+  if((s.pages||[]).some(p=>p.slug===slug)) return alert('That page slug already exists.');
+  s.pages.push({slug,html:'<h2>'+slug+'</h2><p>New page.</p>'}); save(); hydrateEditor();
+};
+
+$("savePageBtn").onclick=()=>{
+  const s=bySiteId(state.active); if(!s) return; const slug=slugify($("pageSlug").value); if(!slug) return alert('Provide a page slug.');
+  const html=$("pageHtml").value; const idx=(s.pages||[]).findIndex(p=>p.slug===slug);
+  if(idx>=0) s.pages[idx].html = html; else (s.pages||(s.pages=[])).push({slug,html});
+  save(); hydrateEditor(); previewPage(s.slug, slug);
+};
+
+$("bundleBtn").onclick=()=>{
+  const s=bySiteId(state.active); if(!s){ alert('Open a site first.'); return; }
+  const payload = {slug:s.slug, title:s.title, desc:s.desc, theme:s.theme, pages:s.pages};
+  const html = makeBundleHTML(payload);
+  const blob=new Blob([html],{type:'text/html'}); const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download = 'site-'+s.slug+'.html'; a.click(); URL.revokeObjectURL(a.href);
+};
+
+/* ===== EMBEDDER ===== */
+function ensureActiveApp(){ if(!state.activeApp && state.apps[0]) state.activeApp = state.apps[0].id; }
+function appRoute(slug){ return location.origin+location.pathname+"#/e/"+slug; }
+
+function renderApps(){
+  const list=$("appList"); list.innerHTML="";
+  state.apps.forEach(a=>{
+    const row=document.createElement('div'); row.className='app-pill'+(a.id===state.activeApp?' active':'');
+    row.innerHTML = '<span><strong>'+a.name+'</strong> <span class="small">#/e/'+a.slug+'</span></span>';
+    const r=document.createElement('div');
+    const open=document.createElement('button'); open.className='btn secondary'; open.textContent='Open'; open.onclick=()=>{ state.activeApp=a.id; save(); hydrateAppEditor(); renderApps(); updateEmbedRoutePreview(); };
+    r.appendChild(open); row.appendChild(r); list.appendChild(row);
+  });
+  if(!state.apps.length){ list.innerHTML = "<div class='small'>No apps yet. Click <em>+ New App</em> to start.</div>"; }
+}
+
+function hydrateAppEditor(){
+  const a=byAppId(state.activeApp);
+  if(!a){ $("appName").value=''; $("appSlug").value=''; $("appHtml").value=''; $("boxTitle").textContent='—'; $("appFrame").srcdoc=''; return; }
+  $("appName").value=a.name||''; $("appSlug").value=a.slug||''; $("appHtml").value=a.html||'';
+  $("flagScripts").checked = a.sandbox?.scripts!==false; $("flagSame").checked=!!a.sandbox?.same; $("flagForms").checked=!!a.sandbox?.forms; $("flagModals").checked=!!a.sandbox?.modals; $("flagDownloads").checked=!!a.sandbox?.downloads; $("flagPopups").checked=!!a.sandbox?.popups;
+  $("boxTitle").textContent = a.name+" — #/e/"+a.slug;
+  mountAppFrame(a);
+}
+
+$("addAppBtn").onclick=()=>{
+  const name=prompt('App Name?'); if(!name) return; const slug=slugify(prompt('Slug (used in route):', slugify(name))||'');
+  const id='app_'+Date.now();
+  const html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+name+'</title></head><body><h1>'+name+'</h1><p>Hello from '+name+'.</p></body></html>';
+  state.apps.push({id,name,slug,html,sandbox:{scripts:true,same:false,forms:false,modals:false,downloads:false,popups:false}});
+  state.activeApp=id; save(); renderApps(); hydrateAppEditor(); updateEmbedRoutePreview();
+};
+
+$("saveAppBtn").onclick=()=>{
+  const a=byAppId(state.activeApp); if(!a) return; a.name=$("appName").value.trim(); a.slug=slugify($("appSlug").value); a.html=$("appHtml").value;
+  a.sandbox={ scripts:$("flagScripts").checked, same:$("flagSame").checked, forms:$("flagForms").checked, modals:$("flagModals").checked, downloads:$("flagDownloads").checked, popups:$("flagPopups").checked };
+  save(); renderApps(); hydrateAppEditor(); alert('App saved.');
+};
+
+$("deleteAppBtn").onclick=()=>{
+  const a=byAppId(state.activeApp); if(!a) return; if(!confirm('Delete this app?')) return;
+  state.apps = state.apps.filter(x=>x.id!==a.id); state.activeApp=null; save(); renderApps(); hydrateAppEditor(); updateEmbedRoutePreview();
+};
+
+$("viewAppBtn").onclick=()=>{ const a=byAppId(state.activeApp); if(!a) return; mountAppFrame(a,true); };
+$("copyEmbedUrlBtn").onclick=()=>{ const a=byAppId(state.activeApp); if(!a) return; const url=appRoute(a.slug); navigator.clipboard.writeText(url).then(()=>alert('Copied: '+url)); };
+
+function sandboxString(a){
+  if(!a) return '';
+  const flags=[]; if(a.sandbox?.scripts!==false) flags.push('allow-scripts'); if(a.sandbox?.same) flags.push('allow-same-origin'); if(a.sandbox?.forms) flags.push('allow-forms'); if(a.sandbox?.modals) flags.push('allow-modals'); if(a.sandbox?.downloads) flags.push('allow-downloads'); if(a.sandbox?.popups) flags.push('allow-popups');
+  return flags.join(' ');
+}
+
+function mountAppFrame(app, refresh){
+  const frame=$("appFrame"); const box=$("box");
+  const f=sandboxString(app);
+  frame.setAttribute('sandbox', f||'');
+  const injected = app.html.replace('</body>','<script>\n(function(){\n  function send(){ try{ parent.postMessage({type:"plera-autosize", h: document.documentElement.scrollHeight||document.body.scrollHeight }, "*"); }catch(e){} }\n  window.addEventListener("load", send);\n  new ResizeObserver(send).observe(document.body);\n})();\n<\/script></body>');
+  frame.srcdoc = injected;
+  const dims = state.frames[app.id]||{w:box.clientWidth,h:360,x:0,y:0};
+  box.style.width = (dims.w||600)+"px"; frame.style.height=(dims.h||360)+"px"; box.style.transform = 'translate('+(dims.x||0)+'px,'+(dims.y||0)+'px)';
+}
+
+// AUTOSIZE via postMessage
+window.addEventListener('message', (e)=>{
+  if(!e || !e.data || e.data.type!=='plera-autosize') return;
+  const a=byAppId(state.activeApp); if(!a) return; const h=Math.max(180, Math.min(1200, e.data.h||360));
+  $("appFrame").style.height = h+"px"; const dims=state.frames[a.id]||{}; dims.h=h; state.frames[a.id]=dims; save();
+});
+
+$("autosizeBtn").onclick=()=>{ const a=byAppId(state.activeApp); if(!a) return; $("appFrame").contentWindow?.postMessage({type:'plera-autosize-ping'}, '*'); };
+
+// DRAG & RESIZE
+(function dragResize(){
+  const box=$("box"), head=$("boxHead"), resizer=$("resizer"); let drag=null, rs=null;
+  head.addEventListener('mousedown', e=>{ drag={dx:e.clientX, dy:e.clientY}; document.body.style.userSelect='none'; });
+  window.addEventListener('mousemove', e=>{
+    if(drag){ const a=byAppId(state.activeApp); if(!a) return; const dims=state.frames[a.id]||{x:0,y:0,w:box.clientWidth,h:$("appFrame").clientHeight};
+      const nx=(dims.x||0)+(e.clientX-drag.dx); const ny=(dims.y||0)+(e.clientY-drag.dy);
+      box.style.transform='translate('+nx+'px,'+ny+'px)'; drag.dx=e.clientX; drag.dy=e.clientY; dims.x=nx; dims.y=ny; state.frames[a.id]=dims; }
+    if(rs){ const a=byAppId(state.activeApp); if(!a) return; const dims=state.frames[a.id]||{x:0,y:0,w:box.clientWidth,h:$("appFrame").clientHeight};
+      const nw=Math.max(260, rs.w + (e.clientX-rs.x)); const nh=Math.max(180, rs.h + (e.clientY-rs.y));
+      box.style.width=nw+'px'; $("appFrame").style.height=nh+'px'; dims.w=nw; dims.h=nh; state.frames[a.id]=dims; }
+  });
+  window.addEventListener('mouseup', ()=>{ if(drag||rs){ save(); } drag=null; rs=null; document.body.style.userSelect=''; });
+  resizer.addEventListener('mousedown', e=>{ const a=byAppId(state.activeApp); if(!a) return; const dims=state.frames[a.id]||{w:$("box").clientWidth,h:$("appFrame").clientHeight}; rs={x:e.clientX,y:e.clientY,w:dims.w,h:dims.h}; e.stopPropagation(); });
+})();
+
+function updateEmbedRoutePreview(){ const a=byAppId(state.activeApp); $("routePreview").textContent = a? appRoute(a.slug) : '—'; }
+
+$("shellBtn").onclick=()=>{
+  const a=byAppId(state.activeApp); if(!a){ alert('Open an app first.'); return; }
+  const html = makeEmbedderShell([a]); // single‑app shell
+  const blob=new Blob([html],{type:'text/html'}); const link=document.createElement('a');
+  link.href=URL.createObjectURL(blob); link.download='embedder-'+a.slug+'.html'; link.click(); URL.revokeObjectURL(link.href);
+};
+
+/* ===== BRIDGE (postMessage) ===== */
+function setBridge(status){ const el=document.getElementById('bridgePill'); if(el){ el.textContent='Bridge: '+status; } }
+
+function importSitePayload(payload){
+  const site = (payload && payload.site) ? payload.site : payload;
+  if(!site) return null;
+  if(!site.slug) site.slug = (site.title||'site').toLowerCase().replace(/[^a-z0-9\-]+/g,'-').replace(/^-+|-+$/g,'') || 'site';
+  if(!Array.isArray(site.pages) || !site.pages.length){
+    site.pages = [{ slug:'home', html:`<h1>${site.title||'Home'}</h1><p>Welcome.</p>` }];
+  }
+  const idx = state.sites.findIndex(s=>s.slug===site.slug);
+  let id;
+  if(idx>=0){ id = state.sites[idx].id; state.sites[idx] = Object.assign({id}, site); }
+  else { id = 'site_'+Date.now(); state.sites.push(Object.assign({id}, site)); }
+  state.active = id; save(); renderSites(); hydrateEditor(); updateRoutePreview();
+  return state.sites.find(s=>s.id===id);
+}
+function navigateToSite(s, page){
+  const pg = page || (s.pages && s.pages[0] && s.pages[0].slug) || 'home';
+  location.hash = '#/s/'+s.slug+'/'+pg;
+  previewPage(s.slug, pg);
+}
+function postReply(win, msg){ try{ win && win.postMessage(msg, '*'); }catch(e){} }
+
+function bridgeInit(){
+  setBridge('Ready');
+  window.addEventListener('message', (e)=>{
+    const d = e.data||{};
+    if(!d.type) return;
+    if(d.type==='site:ping'){
+      setBridge('Linked');
+      postReply(e.source, {type:'site:host-ready', version:'1.1'});
+      return;
+    }
+    if(d.type==='site:register'){
+      const s = importSitePayload(d);
+      setBridge('Linked');
+      if(d.focus!==false && s) navigateToSite(s, d.page);
+      postReply(e.source, {type:'site:registered', slug: s && s.slug});
+      return;
+    }
+    if(d.type==='site:open'){
+      const s = state.sites.find(x=>x.slug===d.slug);
+      if(s) navigateToSite(s, d.page);
+      return;
+    }
+  });
+}
+
+/* ===== ROUTING (viewer modes) ===== */
+function parseRoute(){ const h=location.hash||''; let m=h.match(/^#\/s\/([^\/]+)\/([^\/]+)$/); if(m) return {kind:'site',slug:m[1],page:m[2]}; m=h.match(/^#\/e\/([^\/]+)$/); if(m) return {kind:'app',slug:m[1]}; return null; }
+function tryRenderRoute(){ const r=parseRoute(); if(!r) return; if(r.kind==='site'){ hostSection.style.display=''; embedSection.style.display='none'; document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); $("tabHostBtn").classList.add('active');
+  const s=state.sites.find(x=>x.slug===r.slug); const p=s?(s.pages||[]).find(x=>x.slug===r.page):null; $("preview").innerHTML=p?p.html:'<em>Page not found.</em>'; $("routeInfo").textContent='Route: #/s/'+r.slug+'/'+r.page; }
+  if(r.kind==='app'){
+    hostSection.style.display='none'; embedSection.style.display=''; document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); $("tabEmbedBtn").classList.add('active');
+    const a=state.apps.find(x=>x.slug===r.slug); if(a){ state.activeApp=a.id; save(); hydrateAppEditor(); }
+  }
+}
+window.addEventListener('hashchange', tryRenderRoute);
+
+/* ===== EXPORT / IMPORT (global) ===== */
+$("exportAllBtn").onclick=()=>{ const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='plera_kit_backup.json'; a.click(); };
+$("importAllInput").onchange=(e)=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const data=JSON.parse(r.result); if(!confirm('Merge import into current data?')) return; if(Array.isArray(data.sites)){
+  const seen=new Set(state.sites.map(s=>s.slug)); data.sites.forEach(s=>{ if(!seen.has(s.slug)) state.sites.push(s); }); }
+  if(Array.isArray(data.apps)){ const seenA=new Set(state.apps.map(a=>a.slug)); data.apps.forEach(a=>{ if(!seenA.has(a.slug)) state.apps.push(a);}); }
+  state.frames = data.frames || state.frames; save(); ensureActiveSite(); ensureActiveApp(); renderSites(); hydrateEditor(); renderApps(); hydrateAppEditor(); updateRoutePreview(); updateEmbedRoutePreview(); alert('Import complete.'); }catch{ alert('Import failed.'); } e.target.value=''; }; r.readAsText(f); };
+
+$("copyUrlBtn").onclick=()=>{ const txt=$("routePreview").textContent.trim(); if(!txt||txt==='—') return; navigator.clipboard.writeText(txt).then(()=>alert('Copied: '+txt)); };
+
+/* ===== BUNDLE FACTORIES ===== */
+function makeBundleHTML(site){
+  const themeCSS = site.theme==='midnight' ? `body{background:#0b1020;color:#f7f3ea} header{background:#091020;color:#e8d5a4;border-bottom:1px solid #b89252}` : site.theme==='onyx' ? `body{background:#0f0f10;color:#f5efe3} header{background:#141417;color:#d9b878;border-bottom:1px solid #3a3a3a}` : `body{background:#f7f3ea;color:#0b1020} header{background:#f5efe3;border-bottom:1px solid #e8d5a4}`;
+  const esc = s => (s||"").replace(/<\/script>/gi,"<\\/script>");
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>${esc(site.title)} — ${esc(site.slug)}</title>
+<style>
+  body{margin:0;font-family:Georgia,serif;line-height:1.44}
+  ${themeCSS}
+  header{padding:14px 16px}
+  .t{font-size:18px}
+  .small{font-size:12px;opacity:.8}
+  main{padding:16px}
+</style>
+</head>
+<body>
+<header>
+  <div class="t">${esc(site.title)}</div>
+  <div class="small">${esc(site.desc)} · Route <code>#/s/${esc(site.slug)}/&lt;page&gt;</code></div>
+</header>
+<main id="view"><em>Loading…</em></main>
+<script>
+  const SITE=${JSON.stringify(site)};
+  function render(){
+    const m=location.hash.match(/^#\/s\/${SITE.slug}\/(.+)$/);
+    const page = m? m[1] : (SITE.pages[0]&&SITE.pages[0].slug)||"home";
+    const p = (SITE.pages||[]).find(x=>x.slug===page);
+    document.getElementById("view").innerHTML = p ? p.html : "<em>Page not found.</em>";
+  }
+  window.addEventListener("hashchange", render); render();
+</script>
+</body></html>`;
+}
+
+function makeEmbedderShell(apps){
+  const esc = s => (s||"").replace(/<\/script>/gi,"<\\/script>");
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>PLERA Sovereign Embedder</title>
+<style>
+  body{margin:0;font-family:Georgia,serif;background:#f7f3ea;color:#0b1020}
+  header{padding:14px 16px;background:#f5efe3;border-bottom:1px solid #e8d5a4}
+  .small{font-size:12px;opacity:.8}
+  main{padding:16px}
+  iframe{width:100%;height:70vh;border:0;background:#fff}
+</style>
+</head>
+<body>
+<header><strong>Sovereign Embedder</strong><div class="small">Route <code>#/e/&lt;slug&gt;</code></div></header>
+<main>
+  <div id="title"></div>
+  <iframe id="f" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>
+</main>
+<script>
+  const APPS=${JSON.stringify(apps)};
+  function flags(a){ const f=[]; if(a.sandbox?.scripts!==false) f.push('allow-scripts'); if(a.sandbox?.same) f.push('allow-same-origin'); if(a.sandbox?.forms) f.push('allow-forms'); if(a.sandbox?.modals) f.push('allow-modals'); if(a.sandbox?.downloads) f.push('allow-downloads'); if(a.sandbox?.popups) f.push('allow-popups'); return f.join(' '); }
+  function mount(a){ const fr=document.getElementById('f'); fr.setAttribute('sandbox', flags(a)); fr.srcdoc = a.html.replace('</body>','<script>(function(){function s(){try{parent.postMessage({type:\'plera-autosize\',h:document.documentElement.scrollHeight||document.body.scrollHeight},"*")}catch(e){}} window.addEventListener("load",s); new ResizeObserver(s).observe(document.body);})();<\/script></body>'); document.getElementById('title').textContent=a.name+' — #/e/'+a.slug; }
+  function route(){ const m=location.hash.match(/^#\/e\/([^\/]+)$/); if(!m){ document.getElementById('f').srcdoc='<p>Use #/e/&lt;slug&gt;.</p>'; return; } const a=APPS.find(x=>x.slug===m[1]); if(!a){ document.getElementById('f').srcdoc='<p>App not found.</p>'; return; } mount(a);} window.addEventListener('hashchange',route); route();
+</script>
+</body></html>`;
+}
+
+/* ===== INIT ===== */
+function init(){ ensureActiveSite(); ensureActiveApp(); renderSites(); hydrateEditor(); renderApps(); hydrateAppEditor(); updateRoutePreview(); updateEmbedRoutePreview(); $1
+  bridgeInit(); }
+
+// GLOBAL EXPORT/IMPORT already wired above
+
+init();
+</script>
+
+<!-- Optional: Numerica guard can be placed here; panel elements marked with data-numerica-ignore are shielded. -->
+</body>
+</html>
