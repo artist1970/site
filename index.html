@@ -1,0 +1,2488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>SIte Alpha v0.6.2</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+:root{
+  --bg:#000000;
+  --panel:#ffffff;
+  --ink:#111;
+  --muted:#666;
+  --accent:#3b5cff;
+  --lock:#c0392b;
+  --ok:#1f8f4e;
+  --warn:#b7791f;
+  --radius:10px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  height:100vh;
+  display:flex;
+}
+.hidden{display:none !important;}
+
+#app{
+  display:grid;
+  grid-template-columns:280px 1fr 320px;
+  width:100%;
+  height:100%;
+}
+.panel{
+  background:var(--panel);
+  border-right:1px solid #ddd;
+  padding:14px;
+  overflow:auto;
+}
+#leftPanel{border-right:1px solid #ddd;}
+#rightPanel{border-right:none; border-left:1px solid #ddd;}
+h3{
+  margin:0 0 10px;
+  font-size:13px;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+hr{border:none;border-top:1px solid #eee;margin:14px 0}
+
+button{
+  padding:8px 12px;
+  border:none;
+  border-radius:var(--radius);
+  background:var(--accent);
+  color:#fff;
+  cursor:pointer;
+  font-size:13px;
+}
+button.secondary{ background:#eee; color:#111; }
+button.locked{ background:var(--lock); }
+button.small{ padding:6px 10px; font-size:12px; border-radius:9px; }
+button:disabled{ opacity:.5; cursor:not-allowed; }
+
+.label{
+  font-size:12px;
+  color:#555;
+  margin-top:8px;
+}
+input, textarea, select{
+  width:100%;
+  padding:8px;
+  margin-top:6px;
+  border:1px solid #ddd;
+  border-radius:10px;
+  font-size:13px;
+  background:#fff;
+}
+textarea{ min-height:84px; resize:vertical; }
+
+/* Top bar */
+#topbar{
+  position:sticky;
+  top:0;
+  z-index:5;
+  background:rgba(246,246,246,.92);
+  backdrop-filter: blur(6px);
+  border-bottom:1px solid #e5e5e5;
+  padding:10px 12px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  justify-content:space-between;
+}
+#topbar .left, #topbar .right{
+  display:flex; gap:10px; align-items:center;
+}
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 10px;
+  border-radius:999px;
+  background:#fff;
+  border:1px solid #ddd;
+  font-size:12px;
+  color:#222;
+}
+.badge{
+  font-size:11px;
+  padding:2px 8px;
+  border-radius:999px;
+  border:1px solid #ddd;
+  background:#fff;
+}
+.badge.ok{ border-color:rgba(31,143,78,.35); color:var(--ok); }
+.badge.warn{ border-color:rgba(183,121,31,.35); color:var(--warn); }
+.badge.lock{ border-color:rgba(192,57,43,.35); color:var(--lock); }
+
+/* Status bar */
+#statusBar{
+  position:sticky;
+  top:52px;
+  z-index:6;
+  padding:8px 12px;
+  border-bottom:1px solid #eee;
+  font-size:12px;
+  color:#222;
+  background:#fff;
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+#statusDot{
+  width:10px; height:10px;
+  border-radius:50%;
+  background:#bbb;
+  flex:0 0 auto;
+}
+#statusMsg{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+
+/* Page list */
+.page{
+  padding:8px 10px;
+  border-radius:10px;
+  margin-bottom:8px;
+  cursor:pointer;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border:1px solid transparent;
+  gap:10px;
+}
+.page:hover{ border-color:#e7e7e7; }
+.page.active{ background:#eef2ff; border-color:#dde3ff; }
+.pageTitle{ font-weight:600; font-size:13px; }
+.mini{ font-size:11px; color:#666; }
+
+/* Canvas */
+#canvas{ padding:0; overflow:auto; }
+.page-canvas{
+  position:relative;
+  max-width:980px;
+  margin:14px auto 22px;
+  background:#fff;
+  border-radius:16px;
+  padding:22px;
+  min-height:78vh;
+  border:1px solid #e9e9e9;
+  overflow:auto;
+}
+footer{
+  text-align:center;
+  font-size:12px;
+  color:#777;
+  margin:18px 0 26px;
+}
+
+/* Blocks (flow) */
+.block{
+  padding:6px 6px;
+  margin-bottom:8px;
+  border:1px dashed transparent;
+  border-radius:12px;
+}
+.block.editable:hover{ border-color:#ccc; }
+.block.selected{ border-color:#9aa9ff; background:#f7f9ff; }
+.section{
+  padding:22px;
+  border:1px solid #eee;
+  border-radius:14px;
+  margin-bottom:20px;
+  background:#fff;
+  width:100%;
+}
+
+/* Free-position blocks */
+.freeWrap{
+  position:absolute;
+  border:1px dashed transparent;
+  border-radius:14px;
+  background:#fff;
+  overflow:hidden;
+}
+.freeWrap.selected{
+  border-color:#9aa9ff;
+  box-shadow: 0 8px 20px rgba(0,0,0,.08);
+}
+.freeInner{
+  width:100%;
+  height:100%;
+  overflow:auto;
+  padding:12px;
+}
+
+/* Header (drag + type pill) – show only on hover/selection */
+.freeHdr{
+  position:absolute;
+  top:8px; left:8px;
+  z-index:3;
+  display:flex;
+  gap:8px;
+  align-items:center;
+  background:rgba(255,255,255,.95);
+  padding:4px 6px;
+  border-radius:999px;
+  box-shadow:0 2px 4px rgba(0,0,0,.14);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .18s ease;
+}
+.freeWrap:hover .freeHdr,
+.freeWrap.selected .freeHdr{
+  opacity:1;
+  pointer-events:auto;
+}
+
+/* give content a little breathing room under header (except when overridden inline) */
+.freeWrap .freeInner{
+  padding-top:32px;
+}
+
+.handle{
+  width:28px; height:28px;
+  border-radius:10px;
+  border:1px solid #ddd;
+  background:#fff;
+  cursor:grab;
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px;
+  touch-action:none;
+  user-select:none;
+}
+.handle:active{ cursor:grabbing; }
+.resizer{
+  position:absolute;
+  right:6px; bottom:6px;
+  width:18px; height:18px;
+  border-radius:6px;
+  border:1px solid #ddd;
+  background:#fff;
+  cursor:nwse-resize;
+  touch-action:none;
+  user-select:none;
+}
+
+/* Languages list */
+.langRow{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:7px 8px;
+  border-radius:10px;
+  border:1px solid #eee;
+  margin-bottom:8px;
+}
+.langRow.active{ border-color:#dde3ff; background:#eef2ff; }
+.langRow .code{ font-weight:700; letter-spacing:.04em; font-size:12px; }
+.langRow .name{ font-size:12px; color:#555; }
+
+.smallhelp{
+  font-size:12px;
+  color:#666;
+  line-height:1.35;
+}
+
+/* Inspector block list */
+.blockList{
+  margin-top:10px;
+  border:1px solid #eee;
+  border-radius:12px;
+  overflow:hidden;
+}
+.blockRow{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:8px 10px;
+  border-top:1px solid #f0f0f0;
+  cursor:pointer;
+  background:#fff;
+}
+.blockRow:first-child{ border-top:none; }
+.blockRow:hover{ background:#fafafa; }
+.blockRow.active{ background:#eef2ff; }
+.blockRow .left{
+  display:flex; gap:8px; align-items:center;
+  min-width:0;
+}
+.blockTag{
+  font-size:10px;
+  padding:2px 8px;
+  border:1px solid #ddd;
+  border-radius:999px;
+  color:#333;
+  background:#fff;
+  flex:0 0 auto;
+}
+.blockLabel{
+  font-size:12px;
+  color:#222;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.blockMiniBtns{
+  display:flex; gap:6px;
+}
+.iconBtn{
+  background:#eee;
+  color:#111;
+  border:none;
+  border-radius:9px;
+  padding:4px 8px;
+  font-size:12px;
+}
+.iconBtn:disabled{ opacity:.45; cursor:not-allowed; }
+
+/* Language adder */
+#langAdder{
+  border:1px solid #eee;
+  border-radius:12px;
+  padding:10px;
+  background:#fafafa;
+}
+#langAdderRow{ display:flex; gap:8px; margin-top:8px; }
+#langCode{ width:30%; }
+#langName{ width:70%; }
+
+/* Tiny toggles */
+.row2{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.chk{
+  display:flex; gap:8px; align-items:center;
+  padding:8px 10px;
+  border:1px solid #eee;
+  border-radius:12px;
+  background:#fff;
+  font-size:12px;
+}
+.chk input{ width:auto; margin:0; }
+
+/* -------- Auth Overlay -------- */
+#authOverlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.45);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:100;
+}
+.auth-card{
+  width:100%;
+  max-width:420px;
+  background:#fff;
+  border-radius:16px;
+  padding:20px 22px;
+  box-shadow:0 18px 40px rgba(0,0,0,.25);
+}
+.auth-card h2{
+  margin:0 0 4px;
+  font-size:20px;
+}
+.auth-sub{
+  font-size:12px;
+  color:#777;
+  margin-bottom:12px;
+}
+.auth-tabs{
+  display:flex;
+  border-radius:999px;
+  background:#f1f1f5;
+  padding:2px;
+  margin-bottom:12px;
+}
+.auth-tabs button{
+  flex:1;
+  border-radius:999px;
+  padding:6px 0;
+  font-size:13px;
+  background:transparent;
+  color:#444;
+}
+.auth-tabs button.active{
+  background:#fff;
+  color:#111;
+  box-shadow:0 1px 4px rgba(0,0,0,.1);
+}
+.auth-row{
+  margin-bottom:8px;
+}
+.auth-row label{
+  display:block;
+  font-size:12px;
+  color:#555;
+}
+.auth-row input{
+  width:100%;
+  padding:7px 9px;
+  margin-top:4px;
+}
+.auth-error{
+  font-size:12px;
+  color:#c0392b;
+  margin-top:6px;
+  min-height:16px;
+}
+.auth-ok{
+  color:#1f8f4e;
+}
+
+/* -------- Preview mode -------- */
+body.preview #leftPanel,
+body.preview #rightPanel,
+body.preview #statusBar,
+body.preview footer{
+  display:none !important;
+}
+body.preview #app{
+  grid-template-columns:1fr;
+}
+body.preview #pageCanvas{
+  max-width:100%;
+  margin:0;
+  border:none;
+  border-radius:0;
+  min-height:100vh;
+}
+body.preview #topbar{
+  border-radius:0;
+}
+body.preview #topbar .right button{
+  display:none;
+}
+body.preview #topbar .right #btnPreview{
+  display:inline-flex;
+}
+#btnPreview{
+  background:#111;
+  color:#fff;
+}
+
+/* Button palette popup */
+#buttonPalette{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.45);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:90;
+}
+#buttonPalette.hidden{display:none !important;}
+.palette-card{
+  width:100%;
+  max-width:420px;
+  background:#fff;
+  border-radius:16px;
+  padding:18px 20px 16px;
+  box-shadow:0 18px 40px rgba(0,0,0,.25);
+}
+.palette-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:10px;
+}
+.palette-btn{
+  width:100%;
+  border-radius:12px;
+  padding:10px 8px;
+  background:#f5f5ff;
+  color:#111;
+  border:1px solid #dde3ff;
+  font-size:13px;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:4px;
+  cursor:pointer;
+}
+.palette-btn span.big{
+  font-size:18px;
+}
+.palette-footer{
+  margin-top:10px;
+  text-align:right;
+}
+
+.alignActive{
+  background:var(--accent) !important;
+  color:#fff !important;
+}
+</style>
+</head>
+
+<body>
+
+<!-- AUTH OVERLAY -->
+<div id="authOverlay">
+  <div class="auth-card">
+    <h2>SIte Alpha — Admin</h2>
+    <div class="auth-sub">
+      Create a private admin account for this browser to edit your SIte layouts.
+    </div>
+    <div class="auth-tabs">
+      <button id="tabSignIn" class="active" type="button">Sign In</button>
+      <button id="tabCreate" type="button">Create Account</button>
+    </div>
+
+    <!-- Sign In -->
+    <div id="authSignIn">
+      <div class="auth-row">
+        <label for="signInEmail">Email</label>
+        <input id="signInEmail" type="email" autocomplete="email" />
+      </div>
+      <div class="auth-row">
+        <label for="signInPass">Passcode</label>
+        <input id="signInPass" type="password" autocomplete="current-password" />
+      </div>
+      <button id="btnSignIn" style="width:100%; margin-top:6px;">Sign In</button>
+    </div>
+
+    <!-- Create Account -->
+    <div id="authCreate" class="hidden">
+      <div class="auth-row">
+        <label for="createName">Full Name</label>
+        <input id="createName" />
+      </div>
+      <div class="auth-row">
+        <label for="createEmail">Email</label>
+        <input id="createEmail" type="email" autocomplete="email" />
+      </div>
+      <div class="auth-row">
+        <label for="createBirth">Birth Date</label>
+        <input id="createBirth" type="date" />
+      </div>
+      <div class="auth-row">
+        <label for="createPhone">Phone (optional)</label>
+        <input id="createPhone" type="tel" />
+      </div>
+      <div class="auth-row">
+        <label for="createPass">Passcode</label>
+        <input id="createPass" type="password" autocomplete="new-password" />
+      </div>
+      <div class="auth-row">
+        <label for="createPass2">Confirm Passcode</label>
+        <input id="createPass2" type="password" autocomplete="new-password" />
+      </div>
+      <div class="smallhelp">
+        Passcode must be at least <b>8 characters</b>, include at least <b>1 letter</b> and <b>1 symbol</b>.
+        Stored locally in this browser only.
+      </div>
+      <button id="btnCreateAccount" style="width:100%; margin-top:6px;">Create Account</button>
+    </div>
+
+    <div id="authMsg" class="auth-error"></div>
+  </div>
+</div>
+
+<!-- BUTTON PALETTE -->
+<div id="buttonPalette" class="hidden">
+  <div class="palette-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+      <div>
+        <div style="font-weight:600;font-size:15px;">Button Palette</div>
+        <div class="smallhelp">Choose a button style to add, then link it in the Inspector.</div>
+      </div>
+      <button id="btnPaletteClose" class="secondary small" type="button">Close</button>
+    </div>
+    <div class="palette-grid">
+      <button class="palette-btn" data-kind="plain">
+        <span class="big">Text Button</span>
+        <span class="smallhelp">Simple labeled button.</span>
+      </button>
+      <button class="palette-btn" data-kind="emoji-star">
+        <span class="big">⭐</span>
+        <span class="smallhelp">Emoji button (star).</span>
+      </button>
+      <button class="palette-btn" data-kind="emoji-heart">
+        <span class="big">❤️</span>
+        <span class="smallhelp">Emoji button (heart).</span>
+      </button>
+      <button class="palette-btn" data-kind="top">
+        <span class="big">↑ Top</span>
+        <span class="smallhelp">Scroll-to-top style button.</span>
+      </button>
+      <button class="palette-btn" data-kind="home">
+        <span class="big">⌂ Home</span>
+        <span class="smallhelp">Home-style button.</span>
+      </button>
+      <button class="palette-btn" data-kind="social-row">
+        <span class="big">📘 📸 ▶️</span>
+        <span class="smallhelp">Social media icon buttons.</span>
+      </button>
+    </div>
+    <div class="palette-footer smallhelp">
+      All buttons can be dragged if “Free Positioning” is enabled in the Inspector.
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" class="hidden">
+
+  <!-- LEFT PANEL -->
+  <div class="panel" id="leftPanel">
+    <h3>Pages</h3>
+    <div class="smallhelp" style="margin:-4px 0 10px;">
+      Tip: Use ▲▼ to reorder pages (saved locally).
+    </div>
+    <div id="pageList"></div>
+    <button id="btnAddPage" class="small">+ Add Page</button>
+
+    <hr>
+
+    <h3>Languages</h3>
+    <div id="langList"></div>
+
+    <div id="langAdder">
+      <div class="smallhelp"><b>Add Language</b> (Wix-sandbox safe)</div>
+      <div id="langAdderRow">
+        <input id="langCode" placeholder="fr" />
+        <input id="langName" placeholder="French" />
+      </div>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button id="btnLangAdd" class="secondary small">Add</button>
+        <button id="btnLangRemove" class="secondary small">Remove Active</button>
+      </div>
+    </div>
+
+    <div class="smallhelp" style="margin-top:10px;">
+      <b>Rule:</b> One layout, many languages. Locked pages block layout edits but allow translation edits.
+    </div>
+
+    <hr>
+
+    <h3>Domains (prep)</h3>
+    <div class="label">Primary</div>
+    <input id="primaryDomain" placeholder="example.com" />
+    <div class="label">Aliases (one per line)</div>
+    <textarea id="aliasDomains" placeholder="example.site&#10;example.net"></textarea>
+
+    <div class="label" style="margin-top:8px;">Planned Live URL</div>
+    <input id="liveUrl" placeholder="https://www.vervenveda.com/SIte_AccountName" />
+
+    <button id="btnSaveDomains" class="secondary small" style="margin-top:8px;">Save Domains</button>
+
+    <div class="smallhelp" style="margin-top:10px;">
+      Domains & live URLs here are <b>descriptive only</b>. They help you track routing for Wix / DNS.
+    </div>
+  </div>
+
+  <!-- CENTER CANVAS -->
+  <div id="canvas">
+    <div id="topbar">
+      <div class="left">
+        <div class="pill"><b>SIte</b> <span style="color:#666;">Alpha v0.6.2</span></div>
+        <div id="topPageBadge" class="badge">—</div>
+        <div id="topLangBadge" class="badge">—</div>
+      </div>
+      <div class="right">
+        <button id="btnPreview" class="small secondary" type="button">Preview View</button>
+        <button id="btnExport" class="secondary small" type="button">Export JSON</button>
+        <button id="btnReset" class="secondary small" type="button">Reset</button>
+        <button id="btnLogout" class="secondary small" type="button">Log Out</button>
+      </div>
+    </div>
+
+    <div id="statusBar">
+      <div id="statusDot"></div>
+      <div id="statusMsg">Ready.</div>
+    </div>
+
+    <div id="pageCanvas" class="page-canvas"></div>
+    <footer>SIte Alpha v0.6.2 — Fixed Drag/Resize Persistence • Page Reorder • Local Mini-Cloud Admin</footer>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel right" id="rightPanel">
+    <h3>Inspector</h3>
+    <div id="inspector"></div>
+
+    <hr>
+
+    <h3>Add Block</h3>
+    <div class="smallhelp" style="margin-bottom:10px;">
+      Layout edits are disabled when a page is locked.
+    </div>
+
+    <button id="btnAddSection">Section</button><br><br>
+    <button id="btnAddText">Text</button><br><br>
+    <button id="btnAddButton">Button (Palette)</button><br><br>
+    <button id="btnAddImage">Image</button><br><br>
+    <button id="btnAddEmbed">Embed HTML</button>
+  </div>
+
+</div>
+
+<script>
+/* =========================
+   SIte Alpha v0.6.2
+   - Free positioning default for new text/button/image/embed
+   - Free block header only on hover/selection (no overlay on saved content)
+   - Same local mini-cloud: localStorage auth + JSON site
+   ========================= */
+
+const STORAGE_KEY = "SITE_ALPHA_V061";      // keep same key so existing data survives
+const AUTH_KEY = "SITE_ALPHA_AUTH_V1";
+
+const FONT_PRESETS = [
+  {value:"system-ui,-apple-system,Segoe UI,Roboto,sans-serif", label:"System UI"},
+  {value:"'Times New Roman',serif", label:"Times New Roman"},
+  {value:"Georgia,serif", label:"Georgia"},
+  {value:"'Palatino Linotype','Book Antiqua',Palatino,serif", label:"Palatino / Book Antiqua"},
+  {value:"'Courier New',monospace", label:"Courier New"},
+  {value:"'Trebuchet MS',sans-serif", label:"Trebuchet"},
+  {value:"Verdana,sans-serif", label:"Verdana"},
+  {value:"Arial,sans-serif", label:"Arial"},
+  {value:"'Adobe Caslon Pro',serif", label:"Adobe Caslon (if installed)"}
+];
+
+const $  = (id)=>document.getElementById(id);
+const uid= ()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
+const deepClone = (o)=>JSON.parse(JSON.stringify(o));
+function safeParse(str, fb){ try{return JSON.parse(str);}catch(e){return fb;} }
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, s=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[s]));
+}
+function escapeHtmlForTextarea(str){
+  return escapeHtml(str).replace(/<\/textarea>/gi,"&lt;/textarea&gt;");
+}
+function clamp(n,min,max){ return Math.max(min,Math.min(max,n)); }
+
+/* ----- Status Bar ----- */
+let statusTimer=null;
+function setStatus(msg, kind="info"){
+  const dot=$("statusDot"), out=$("statusMsg");
+  if(!dot||!out) return;
+  out.textContent=msg;
+  dot.style.background=
+    kind==="ok"  ? "#1f8f4e" :
+    kind==="warn"? "#b7791f" :
+    kind==="bad" ? "#c0392b" : "#777";
+  if(statusTimer) clearTimeout(statusTimer);
+  statusTimer=setTimeout(()=>{ dot.style.background="#bbb"; },2500);
+}
+
+/* =========================
+   Storage Layer (mini-cloud)
+   ========================= */
+const MemStore=(()=>{
+  const m=new Map();
+  return{
+    getItem:k=>m.has(k)?m.get(k):null,
+    setItem:(k,v)=>m.set(k,String(v)),
+    removeItem:k=>m.delete(k)
+  };
+})();
+function storageAvailable(){
+  try{
+    const k="__sa_test__";
+    window.localStorage.setItem(k,"1");
+    window.localStorage.removeItem(k);
+    return true;
+  }catch(e){ return false; }
+}
+const STORAGE_OK=storageAvailable();
+const store=STORAGE_OK?window.localStorage:MemStore;
+
+/* =========================
+   Auth (local-only admin)
+   ========================= */
+let currentUser=null;
+let viewMode="admin";
+
+function loadAccount(){
+  const raw=store.getItem(AUTH_KEY);
+  if(!raw) return null;
+  const acc=safeParse(raw,null);
+  return acc && acc.email ? acc : null;
+}
+function saveAccount(acc){
+  try{ store.setItem(AUTH_KEY, JSON.stringify(acc)); }catch(e){}
+}
+function passwordValid(p){
+  if(!p || p.length<8) return false;
+  if(!/[A-Za-z]/.test(p)) return false;
+  if(!/[^A-Za-z0-9]/.test(p)) return false;
+  return true;
+}
+function showAuthMessage(msg, ok=false){
+  const m=$("authMsg");
+  if(!m) return;
+  m.textContent=msg||"";
+  m.className= ok ? "auth-error auth-ok" : "auth-error";
+}
+function setAuthMode(mode){
+  const signTab=$("tabSignIn"), createTab=$("tabCreate");
+  const signView=$("authSignIn"), createView=$("authCreate");
+  if(!signTab||!createTab||!signView||!createView) return;
+  if(mode==="create"){
+    signTab.classList.remove("active");
+    createTab.classList.add("active");
+    signView.classList.add("hidden");
+    createView.classList.remove("hidden");
+  }else{
+    createTab.classList.remove("active");
+    signTab.classList.add("active");
+    createView.classList.add("hidden");
+    signView.classList.remove("hidden");
+  }
+  showAuthMessage("");
+}
+function authInit(){
+  const acc=loadAccount();
+  if(acc){ setAuthMode("signin"); }
+  else{ setAuthMode("create"); }
+
+  $("tabSignIn").onclick=()=>setAuthMode("signin");
+  $("tabCreate").onclick=()=>setAuthMode("create");
+
+  $("btnCreateAccount").onclick=()=>{
+    const name = $("createName").value.trim();
+    const email= $("createEmail").value.trim().toLowerCase();
+    const birth= $("createBirth").value.trim();
+    const phone= $("createPhone").value.trim();
+    const pass = $("createPass").value;
+    const pass2= $("createPass2").value;
+
+    if(!name || !email || !birth || !pass){
+      showAuthMessage("Please fill in name, email, birth date, and passcode.");
+      return;
+    }
+    if(!/^[^@]+@[^@]+\.[^@]+$/.test(email)){
+      showAuthMessage("Please enter a valid email address.");
+      return;
+    }
+    if(!passwordValid(pass)){
+      showAuthMessage("Passcode must be 8+ chars with at least 1 letter and 1 symbol.");
+      return;
+    }
+    if(pass!==pass2){
+      showAuthMessage("Passcodes do not match.");
+      return;
+    }
+
+    const accObj={
+      fullName:name,
+      email,
+      birthDate:birth,
+      phone,
+      pass: btoa(pass)
+    };
+    saveAccount(accObj);
+    currentUser=accObj;
+    $("authOverlay").classList.add("hidden");
+    $("app").classList.remove("hidden");
+    setStatus("Admin account created (local mini-cloud in this browser).", "ok");
+  };
+
+  $("btnSignIn").onclick=()=>{
+    const acc=loadAccount();
+    if(!acc){
+      showAuthMessage("No account exists yet. Please create an account.");
+      setAuthMode("create");
+      return;
+    }
+    const email=$("signInEmail").value.trim().toLowerCase();
+    const pass =$("signInPass").value;
+    if(email!==acc.email){
+      showAuthMessage("Email not found for this browser.");
+      return;
+    }
+    if(btoa(pass)!==acc.pass){
+      showAuthMessage("Incorrect passcode.");
+      return;
+    }
+    currentUser=acc;
+    $("authOverlay").classList.add("hidden");
+    $("app").classList.remove("hidden");
+    setStatus("Signed in as "+(acc.fullName||acc.email)+".","ok");
+  };
+
+  $("btnLogout").onclick=()=>{
+    currentUser=null;
+    viewMode="admin";
+    document.body.classList.remove("preview");
+    $("authOverlay").classList.remove("hidden");
+    $("app").classList.add("hidden");
+    $("signInPass").value="";
+    showAuthMessage("You have been logged out.", false);
+  };
+
+  // Little hint about storage health
+  if(STORAGE_OK){
+    setStatus("Mini-cloud ready: using local storage in this browser.","ok");
+  }else{
+    setStatus("Mini-cloud fallback: changes won't persist after this tab closes.","warn");
+  }
+}
+
+/* =========================
+   Default Site
+   ========================= */
+const DEFAULT_SITE={
+  meta:{ createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), version:"0.6.2" },
+  domains:{
+    primary:"example.com",
+    aliases:["example.site","example.net"],
+    liveUrl:""
+  },
+  languages:{
+    default:"en",
+    active:"en",
+    list:[ {code:"en", name:"English"}, {code:"sp", name:"Spanish"} ]
+  },
+  pages:[
+    {
+      id:"home",
+      title:"Home",
+      locked:false,
+      bgColor:"#ffffff",
+      bgImage:"",
+      blocks:[
+        {
+          id:uid(),
+          type:"text",
+          t:{ en:"Welcome to SIte." },
+          style:{ fontSize:28, color:"#d4af37", fontFamily:"'Adobe Caslon Pro', serif" }
+        }
+      ]
+    }
+  ]
+};
+
+let site = loadSite();
+let currentPage = site.pages[0];
+let selectedBlockId = null;
+
+/* =========================
+   Load/Save with migration
+   ========================= */
+function loadSite(){
+  const raw=store.getItem(STORAGE_KEY);
+  if(raw){
+    const data=safeParse(raw,null);
+    if(data && data.pages){
+      data.meta=data.meta||{};
+      data.meta.version="0.6.2";
+      return data;
+    }
+  }
+  const older=[
+    "SITE_ALPHA_V034","SITE_ALPHA_V033","SITE_ALPHA_V032","SITE_ALPHA_V031","SITE_ALPHA_V03"
+  ];
+  for(const k of older){
+    const r=store.getItem(k);
+    if(r){
+      const d=safeParse(r,null);
+      if(d && d.pages){
+        d.meta=d.meta||{};
+        d.meta.version="0.6.2";
+        try{store.setItem(STORAGE_KEY,JSON.stringify(d));}catch(e){}
+        return d;
+      }
+    }
+  }
+  return deepClone(DEFAULT_SITE);
+}
+function saveSite(){
+  site.meta.updatedAt=new Date().toISOString();
+  site.meta.version="0.6.2";
+  try{ store.setItem(STORAGE_KEY, JSON.stringify(site)); }catch(e){}
+}
+let saveDebounce=null;
+function saveSiteDebounced(){
+  if(saveDebounce) clearTimeout(saveDebounce);
+  saveDebounce=setTimeout(saveSite,250);
+}
+
+/* =========================
+   Multilingual
+   ========================= */
+function ensureTranslationMap(block){
+  if(!block.t) block.t={};
+  const def=site.languages.default;
+  if(["text","button","embed","section"].includes(block.type)){
+    if(typeof block.t[def]!=="string"){
+      block.t[def]= block.type==="embed"
+        ? "<div>Custom HTML</div>"
+        : "Edit text";
+    }
+  }
+}
+function getLang(){ return site.languages.active || site.languages.default; }
+function setLang(code){
+  const exists=site.languages.list.some(l=>l.code===code);
+  if(!exists){ setStatus("Language not found.","bad"); return; }
+  site.languages.active=code;
+  saveSiteDebounced();
+  render();
+  setStatus("Language set to "+code.toUpperCase()+".","ok");
+}
+function getText(block, lang){
+  ensureTranslationMap(block);
+  const def=site.languages.default;
+  return (typeof block.t[lang]==="string" && block.t[lang].trim()!=="")
+    ? block.t[lang]
+    : (block.t[def]||"");
+}
+
+/* =========================
+   Helpers & Styling
+   ========================= */
+function selectedBlock(){
+  return currentPage.blocks.find(b=>b.id===selectedBlockId)||null;
+}
+function blockDom(bid){
+  return document.querySelector(`[data-bid="${bid}"]`);
+}
+function blockLabel(b, lang, def){
+  if(["text","button","embed","section"].includes(b.type)){
+    ensureTranslationMap(b);
+    const t=(getText(b,lang)||"").trim() || (getText(b,def)||"").trim();
+    const short=t.replace(/\s+/g," ").slice(0,28);
+    if(short) return short;
+    if(b.type==="button") return "Button";
+    if(b.type==="embed") return "Embed";
+    if(b.type==="section") return "Section";
+    return "Text";
+  }
+  if(b.type==="image") return b.src ? "Image" : "Image (unset)";
+  return b.type;
+}
+
+function applyBlockStyle(b, dom){
+  if(!dom) return;
+  const st=b.style||{};
+
+  if(b.type==="section"){
+    dom.style.backgroundColor=st.bgColor||"#ffffff";
+    dom.style.padding=(typeof st.padding==="number"?st.padding:22)+"px";
+    return;
+  }
+
+  if(b.type==="image"){
+    const filters=st.filters||{};
+    const br = typeof filters.brightness==="number" ? filters.brightness : 1;
+    const ct = typeof filters.contrast==="number"   ? filters.contrast   : 1;
+    const sa = typeof filters.saturate==="number"   ? filters.saturate   : 1;
+    dom.style.filter = `brightness(${br}) contrast(${ct}) saturate(${sa})`;
+    return;
+  }
+
+  if(st.fontSize) dom.style.fontSize=st.fontSize+"px"; else dom.style.fontSize="";
+  if(st.color) dom.style.color=st.color; else dom.style.color="";
+  if(st.fontFamily) dom.style.fontFamily=st.fontFamily; else dom.style.fontFamily="";
+  if(st.textAlign) dom.style.textAlign=st.textAlign; else dom.style.textAlign="";
+  if(st.bgColor) dom.style.backgroundColor=st.bgColor; else dom.style.backgroundColor="";
+}
+
+function patchBlockStyle(b){
+  const el=blockDom(b.id);
+  if(!el) return;
+  let target=el;
+
+  if(el.classList.contains("freeWrap")){
+    if(b.type==="button"){
+      target=el.querySelector("button")||target;
+    }else if(b.type==="section"){
+      target=el.querySelector(".section")||el.querySelector(".freeInner")||target;
+    }else if(b.type==="image"){
+      target=el.querySelector("img")||target;
+    }else{
+      target=el.querySelector(".freeInner")||target;
+    }
+  }else if(b.type==="button"){
+    target=el.querySelector("button")||target;
+  }else if(b.type==="section"){
+    target=el;
+  }else if(b.type==="image"){
+    target=el.querySelector("img")||target;
+  }
+
+  applyBlockStyle(b,target);
+}
+
+/* =========================
+   Drag / Resize
+   (canvas-relative coords)
+   ========================= */
+let dragState=null;
+let resizeState=null;
+
+function ensurePos(b){
+  if(!b.pos) b.pos={x:40,y:40,w:260,h:80};
+  if(typeof b.pos.w!=="number") b.pos.w=260;
+  if(typeof b.pos.h!=="number") b.pos.h=80;
+}
+
+function getCanvas(){ return $("pageCanvas"); }
+
+function ptInCanvas(e){
+  const canvas=getCanvas();
+  const r=canvas.getBoundingClientRect();
+  const x=(e.clientX - r.left) + canvas.scrollLeft;
+  const y=(e.clientY - r.top ) + canvas.scrollTop;
+  return {x,y};
+}
+
+function patchFreeWrap(b){
+  const el=blockDom(b.id);
+  if(!el||!b.pos) return;
+  el.style.left=b.pos.x+"px";
+  el.style.top =b.pos.y+"px";
+  el.style.width=b.pos.w+"px";
+  el.style.height=b.pos.h+"px";
+}
+
+function startDrag(e,bid){
+  const b=currentPage.blocks.find(x=>x.id===bid);
+  if(!b||!b.pos) return;
+  const p=ptInCanvas(e);
+  dragState={bid, sx:p.x, sy:p.y, ox:b.pos.x, oy:b.pos.y};
+  try{ e.target.setPointerCapture(e.pointerId); }catch(_){}
+  document.body.style.userSelect="none";
+}
+function startResize(e,bid){
+  const b=currentPage.blocks.find(x=>x.id===bid);
+  if(!b||!b.pos) return;
+  const p=ptInCanvas(e);
+  resizeState={bid, sx:p.x, sy:p.y, ow:b.pos.w, oh:b.pos.h};
+  try{ e.target.setPointerCapture(e.pointerId); }catch(_){}
+  document.body.style.userSelect="none";
+}
+
+document.addEventListener("pointermove",e=>{
+  if(dragState){
+    const b=currentPage.blocks.find(x=>x.id===dragState.bid);
+    if(!b||!b.pos) return;
+    const p=ptInCanvas(e);
+    b.pos.x = dragState.ox + (p.x - dragState.sx);
+    b.pos.y = dragState.oy + (p.y - dragState.sy);
+    saveSiteDebounced();
+    patchFreeWrap(b);
+  }
+  if(resizeState){
+    const b=currentPage.blocks.find(x=>x.id===resizeState.bid);
+    if(!b||!b.pos) return;
+    const p=ptInCanvas(e);
+    b.pos.w = clamp(resizeState.ow + (p.x - resizeState.sx),120,2000);
+    b.pos.h = clamp(resizeState.oh + (p.y - resizeState.sy),80,2000);
+    saveSiteDebounced();
+    patchFreeWrap(b);
+  }
+});
+
+document.addEventListener("pointerup",()=>{
+  if (dragState || resizeState) {
+    const bid = (dragState && dragState.bid) || (resizeState && resizeState.bid);
+    const b = bid && currentPage.blocks.find(x=>x.id===bid);
+    const el = bid && blockDom(bid);
+    if (b && el) {
+      ensurePos(b);
+      b.pos.x = el.offsetLeft;
+      b.pos.y = el.offsetTop;
+      b.pos.w = el.offsetWidth;
+      b.pos.h = el.offsetHeight;
+      saveSiteDebounced();
+    }
+  }
+  dragState=null;
+  resizeState=null;
+  document.body.style.userSelect="";
+});
+
+/* =========================
+   Button click navigation
+   ========================= */
+function handleButtonClick(b){
+  const link=b.link||{};
+  if(link.type==="page" && link.pageId){
+    const tgt=site.pages.find(p=>p.id===link.pageId);
+    if(tgt){
+      currentPage=tgt;
+      selectedBlockId=null;
+      saveSiteDebounced();
+      render();
+      setStatus(`Navigated to "${tgt.title}".`,"ok");
+      return;
+    }
+  }
+  if(link.type==="url" && link.url){
+    if(link.url==="#top"){
+      const c=getCanvas();
+      if(c) c.scrollTo({top:0, behavior:"smooth"});
+      setStatus("Scrolled to top.","ok");
+      return;
+    }
+    setStatus("Opening "+link.url,"ok");
+    try{ window.open(link.url,"_blank"); }catch(e){}
+    return;
+  }
+  setStatus("Button has no link set.","warn");
+}
+
+/* =========================
+   Rendering helpers
+   ========================= */
+function translationCompleteness(page){
+  const langs=site.languages.list.map(l=>l.code);
+  const def = site.languages.default;
+  const tBlocks=page.blocks.filter(b=>["text","button","embed","section"].includes(b.type));
+  const res={};
+  for(const lc of langs){
+    let missing=0, total=0;
+    for(const b of tBlocks){
+      ensureTranslationMap(b);
+      total++;
+      const v=(b.t && typeof b.t[lc]==="string")?b.t[lc].trim():"";
+      if(lc!==def && v==="") missing++;
+    }
+    res[lc]={complete:missing===0,missing,total};
+  }
+  return res;
+}
+function renderTopBadges(){
+  const pBadge=$("topPageBadge"), lBadge=$("topLangBadge");
+  if(!pBadge||!lBadge) return;
+  const lang=getLang();
+  const comp=translationCompleteness(currentPage)[lang] || {complete:true,missing:0,total:0};
+  const lockTxt=currentPage.locked?"Locked":"Editable";
+  pBadge.className="badge "+(currentPage.locked?"lock":"");
+  pBadge.textContent=`${currentPage.title} • ${lockTxt}`;
+  lBadge.className="badge "+(comp.complete?"ok":"warn");
+  lBadge.textContent=comp.total===0
+    ? `Lang: ${lang.toUpperCase()} • N/A`
+    : `Lang: ${lang.toUpperCase()} • ${comp.complete?"Complete":"Missing "+comp.missing}`;
+}
+
+/* =========================
+   Page Reorder
+   ========================= */
+function movePage(pageId, dir){
+  const i = site.pages.findIndex(p=>p.id===pageId);
+  if(i<0) return;
+  const j = i + dir;
+  if(j<0 || j>=site.pages.length) return;
+
+  const tmp = site.pages[i];
+  site.pages[i] = site.pages[j];
+  site.pages[j] = tmp;
+
+  currentPage = site.pages.find(p=>p.id===currentPage.id) || site.pages[0];
+  saveSiteDebounced();
+  renderPages();
+  renderInspector();
+  renderTopBadges();
+  setStatus("Page reordered.","ok");
+}
+
+function renderPages(){
+  const list=$("pageList");
+  if(!list) return;
+  list.innerHTML="";
+  const lang=getLang();
+
+  site.pages.forEach((p,idx)=>{
+    const div=document.createElement("div");
+    div.className="page"+(p.id===currentPage.id?" active":"");
+    const comp=translationCompleteness(p)[lang] || {complete:true,missing:0,total:0};
+    const badgeText=comp.total===0?"—":(comp.complete?"✓":"!"+comp.missing);
+
+    div.innerHTML=`
+      <div style="min-width:0;">
+        <div class="pageTitle">${escapeHtml(p.title)}</div>
+        <div class="mini">${p.locked?"🔒 Locked":"✏️ Editable"} • ${lang.toUpperCase()} ${badgeText}</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button class="iconBtn" ${idx===0?"disabled":""} data-pageup="${p.id}" title="Move page up">▲</button>
+        <button class="iconBtn" ${idx===site.pages.length-1?"disabled":""} data-pagedn="${p.id}" title="Move page down">▼</button>
+      </div>
+    `;
+
+    div.addEventListener("click",()=>{
+      currentPage=p;
+      selectedBlockId=null;
+      saveSiteDebounced();
+      render();
+    });
+
+    list.appendChild(div);
+  });
+
+  list.querySelectorAll("[data-pageup]").forEach(btn=>{
+    btn.addEventListener("click",e=>{
+      e.stopPropagation();
+      movePage(btn.getAttribute("data-pageup"), -1);
+    });
+  });
+  list.querySelectorAll("[data-pagedn]").forEach(btn=>{
+    btn.addEventListener("click",e=>{
+      e.stopPropagation();
+      movePage(btn.getAttribute("data-pagedn"), +1);
+    });
+  });
+}
+
+function renderLangs(){
+  const list=$("langList");
+  if(!list) return;
+  list.innerHTML="";
+  const active=getLang();
+  site.languages.list.forEach(l=>{
+    const row=document.createElement("div");
+    row.className="langRow"+(l.code===active?" active":"");
+    row.innerHTML=`
+      <div>
+        <div class="code">${l.code.toUpperCase()}</div>
+        <div class="name">${escapeHtml(l.name)}</div>
+      </div>
+      <button class="secondary small">${l.code===active?"Active":"Use"}</button>
+    `;
+    row.querySelector("button").addEventListener("click",e=>{
+      e.stopPropagation();
+      setLang(l.code);
+    });
+    list.appendChild(row);
+  });
+}
+
+function renderCanvas(){
+  const canvas=$("pageCanvas");
+  if(!canvas) return;
+  canvas.innerHTML="";
+  const lang=getLang();
+
+  // Flow blocks
+  currentPage.blocks.forEach(b=>{
+    if(b.pos) return;
+    const el=document.createElement("div");
+    el.dataset.bid=b.id;
+    el.className="block "+(!currentPage.locked?"editable":"")+(b.id===selectedBlockId?" selected":"");
+    if(b.type==="section") el.classList.add("section");
+
+    el.addEventListener("click",e=>{
+      e.stopPropagation();
+      selectedBlockId=b.id;
+      renderInspector();
+      highlightSelection();
+    });
+
+    if(b.type==="text"){
+      ensureTranslationMap(b);
+      el.textContent=getText(b,lang);
+      applyBlockStyle(b,el);
+    }else if(b.type==="button"){
+      ensureTranslationMap(b);
+      const btn=document.createElement("button");
+      btn.textContent=getText(b,lang);
+      btn.addEventListener("click",e=>{
+        e.preventDefault(); e.stopPropagation();
+        handleButtonClick(b);
+      });
+      applyBlockStyle(b,btn);
+      el.appendChild(btn);
+    }else if(b.type==="image"){
+      const img=document.createElement("img");
+      img.src=b.src||"https://via.placeholder.com/900x260";
+      img.style.maxWidth="100%";
+      img.style.borderRadius="12px";
+      applyBlockStyle(b,img);
+      el.appendChild(img);
+    }else if(b.type==="embed"){
+      ensureTranslationMap(b);
+      el.innerHTML=getText(b,lang);
+    }else if(b.type==="section"){
+      ensureTranslationMap(b);
+      el.textContent=getText(b,lang);
+      applyBlockStyle(b,el);
+    }
+    canvas.appendChild(el);
+  });
+
+  // Free-position blocks
+  currentPage.blocks.forEach(b=>{
+    if(!b.pos) return;
+
+    const wrap=document.createElement("div");
+    wrap.className="freeWrap"+(b.id===selectedBlockId?" selected":"");
+    wrap.dataset.bid=b.id;
+    wrap.style.left=b.pos.x+"px";
+    wrap.style.top=b.pos.y+"px";
+    wrap.style.width=b.pos.w+"px";
+    wrap.style.height=b.pos.h+"px";
+
+    wrap.addEventListener("click",e=>{
+      e.stopPropagation();
+      selectedBlockId=b.id;
+      renderInspector();
+      highlightSelection();
+    });
+
+    const hdr=document.createElement("div");
+    hdr.className="freeHdr";
+
+    const drag=document.createElement("div");
+    drag.className="handle";
+    drag.title="Drag";
+    drag.textContent="↕︎";
+    drag.addEventListener("pointerdown",e=>{
+      if(currentPage.locked) return;
+      e.stopPropagation();
+      startDrag(e,b.id);
+    });
+
+    const tag=document.createElement("span");
+    tag.className="badge";
+    tag.textContent=b.type.toUpperCase();
+    hdr.appendChild(drag);
+    hdr.appendChild(tag);
+    wrap.appendChild(hdr);
+
+    const inner=document.createElement("div");
+    inner.className="freeInner";
+
+    if(b.type==="section"){
+      ensureTranslationMap(b);
+      inner.classList.add("section");
+      inner.textContent=getText(b,lang);
+      applyBlockStyle(b,inner);
+    }else if(b.type==="image"){
+      const img=document.createElement("img");
+      img.src=b.src||"https://via.placeholder.com/900x260";
+      img.style.width="100%";
+      img.style.height="100%";
+      img.style.objectFit="cover";
+      img.style.borderRadius="12px";
+      inner.style.padding="0";           // overrides CSS padding-top for full-bleed image
+      inner.appendChild(img);
+      applyBlockStyle(b,img);
+    }else if(b.type==="embed"){
+      ensureTranslationMap(b);
+      inner.innerHTML=getText(b,lang);
+    }else if(b.type==="text"){
+      ensureTranslationMap(b);
+      inner.textContent=getText(b,lang);
+      applyBlockStyle(b,inner);
+    }else if(b.type==="button"){
+      ensureTranslationMap(b);
+      const btn=document.createElement("button");
+      btn.textContent=getText(b,lang);
+      btn.addEventListener("click",e=>{
+        e.preventDefault(); e.stopPropagation();
+        handleButtonClick(b);
+      });
+      applyBlockStyle(b,btn);
+      inner.appendChild(btn);
+    }
+
+    wrap.appendChild(inner);
+
+    const rz=document.createElement("div");
+    rz.className="resizer";
+    rz.title="Resize";
+    rz.addEventListener("pointerdown",e=>{
+      if(currentPage.locked) return;
+      e.stopPropagation();
+      startResize(e,b.id);
+    });
+    wrap.appendChild(rz);
+
+    canvas.appendChild(wrap);
+  });
+
+  canvas.addEventListener("click",()=>{
+    selectedBlockId=null;
+    renderInspector();
+    highlightSelection();
+  },{once:true});
+
+  applyPageStyles();
+}
+
+function highlightSelection(){
+  document.querySelectorAll("[data-bid]").forEach(el=>{
+    const bid=el.getAttribute("data-bid");
+    el.classList.toggle("selected",bid===selectedBlockId);
+    el.classList.toggle("active",bid===selectedBlockId);
+  });
+  renderTopBadges();
+}
+
+/* =========================
+   Inspector
+   ========================= */
+function renderInspector(){
+  const ins=$("inspector");
+  if(!ins) return;
+  const b=selectedBlock();
+  const lang=getLang();
+  const def=site.languages.default;
+
+  const canEditStructure=!currentPage.locked;
+  const bgColor=currentPage.bgColor||"#ffffff";
+  const bgImage=currentPage.bgImage||"";
+
+  let html=`
+    <div class="row2" style="margin-bottom:10px;">
+      <button id="btnLockPage" class="${currentPage.locked?"locked":""} small">${currentPage.locked?"Unlock Page":"Lock Page"}</button>
+      <button id="btnRenamePage" class="secondary small">Rename</button>
+    </div>
+
+    <div class="label">Language</div>
+    <select id="insLang">
+      ${site.languages.list.map(l=>`<option value="${l.code}" ${l.code===lang?"selected":""}>${l.name} (${l.code.toUpperCase()})</option>`).join("")}
+    </select>
+
+    <div class="label" style="margin-top:10px;">Page Background Color</div>
+    <input type="color" id="pageBgColor" value="${bgColor}" />
+
+    <div class="label" style="margin-top:10px;">Page Background Image URL</div>
+    <input id="pageBgImage" value="${escapeHtml(bgImage)}" placeholder="https://..." />
+    <button id="btnApplyPageBg" class="secondary small" style="margin-top:6px;">Apply Background</button>
+
+    <div class="label" style="margin-top:10px;">Blocks</div>
+    <div class="blockList" id="blockList">
+      ${currentPage.blocks.map((blk,i)=>{
+        const label=blockLabel(blk,lang,def);
+        const activeRow=blk.id===selectedBlockId?" active":"";
+        const upDis=(!canEditStructure||i===0)?"disabled":"";
+        const dnDis=(!canEditStructure||i===currentPage.blocks.length-1)?"disabled":"";
+        return `
+          <div class="blockRow${activeRow}" data-select="${blk.id}">
+            <div class="left">
+              <span class="blockTag">${blk.type.toUpperCase()}</span>
+              <span class="blockLabel">${escapeHtml(label)}</span>
+            </div>
+            <div class="blockMiniBtns">
+              <button class="iconBtn" ${upDis} data-up="${blk.id}">▲</button>
+              <button class="iconBtn" ${dnDis} data-dn="${blk.id}">▼</button>
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+
+  if(!b){
+    ins.innerHTML=html+`<div class="smallhelp" style="margin-top:12px;">Select a block to edit it.</div>`;
+    wireInspectorBase();
+    return;
+  }
+
+  html+=`<hr><div class="label"><b>Selected:</b> ${b.type.toUpperCase()} #${escapeHtml(b.id.slice(-5))}</div>`;
+
+  const idx=currentPage.blocks.findIndex(x=>x.id===b.id);
+  html+=`
+    <div class="row2" style="margin-top:10px;">
+      <button id="btnMoveUp" class="secondary small" ${(!canEditStructure||idx<=0)?"disabled":""}>Up</button>
+      <button id="btnMoveDn" class="secondary small" ${(!canEditStructure||idx>=currentPage.blocks.length-1)?"disabled":""}>Down</button>
+    </div>
+  `;
+
+  const freeCapable=["section","image","embed","text","button"].includes(b.type);
+  if(freeCapable){
+    html+=`
+      <div style="margin-top:12px;">
+        <div class="chk">
+          <input type="checkbox" id="chkFreePos" ${b.pos?"checked":""} ${canEditStructure?"":"disabled"} />
+          <label for="chkFreePos"><b>Free Positioning</b> (drag + resize)</label>
+        </div>
+        <div class="smallhelp" style="margin-top:6px;">
+          Default for new blocks is <b>on</b>. Uncheck to snap this block back into the flow layout.
+        </div>
+      </div>
+    `;
+  }
+
+  if(b.type==="text" || b.type==="button"){
+    ensureTranslationMap(b);
+    const val=getText(b,lang);
+    const st=b.style||{};
+    const sz=typeof st.fontSize==="number"?st.fontSize:(b.type==="button"?18:24);
+    const col=st.color||"#222222";
+    const fam=st.fontFamily||"";
+    const align=st.textAlign||"left";
+    const bgc=st.bgColor||"#ffffff";
+    const fontOptions = FONT_PRESETS.map(f=>
+      `<option value="${escapeHtml(f.value)}" ${f.value===fam?"selected":""}>${escapeHtml(f.label)}</option>`
+    ).join("");
+
+    html+=`
+      <div class="label" style="margin-top:12px;">${b.type==="text"?"Text":"Button Label"} (${lang.toUpperCase()})</div>
+      <textarea id="txtValue">${escapeHtmlForTextarea(val)}</textarea>
+
+      <div class="label" style="margin-top:10px;">Font Size</div>
+      <input type="range" id="fontSizeSlider" min="12" max="80" value="${sz}" />
+      <div class="smallhelp">Size: <span id="fontSizeValue">${sz}</span> px</div>
+
+      <div class="label" style="margin-top:10px;">Text Color</div>
+      <input type="color" id="fontColorInput" value="${col}" />
+
+      <div class="label" style="margin-top:10px;">Background Color (behind text / button)</div>
+      <input type="color" id="bgColorInput" value="${bgc}" />
+
+      <div class="label" style="margin-top:10px;">Font Family (search or custom)</div>
+      <input id="fontFamilyInput" value="${escapeHtml(fam)}" placeholder="Type a font name…" />
+
+      <div class="label" style="margin-top:10px;">Font Presets</div>
+      <select id="fontFamilySelect">
+        <option value="">— Choose font —</option>
+        ${fontOptions}
+      </select>
+      <div class="smallhelp">Choose a preset or type your own font stack above.</div>
+
+      <div class="label" style="margin-top:10px;">Text Align</div>
+      <div class="row2">
+        <button type="button" class="secondary small alignBtn ${align==="left"?"alignActive":""}" data-align="left">Left</button>
+        <button type="button" class="secondary small alignBtn ${align==="center"?"alignActive":""}" data-align="center">Center</button>
+        <button type="button" class="secondary small alignBtn ${align==="right"?"alignActive":""}" data-align="right">Right</button>
+      </div>
+    `;
+  }
+
+  if(b.type==="button"){
+    const link=b.link||{};
+    const type=link.type||"none";
+    const url=link.url||"";
+    const pageId=link.pageId||"";
+    const pageOpts=site.pages.map(p=>
+      `<option value="${p.id}" ${p.id===pageId?"selected":""}>${escapeHtml(p.title)}</option>`
+    ).join("");
+
+    html+=`
+      <hr>
+      <div class="label" style="margin-top:8px;">Button Link</div>
+      <select id="btnLinkType">
+        <option value="none" ${type==="none"?"selected":""}>None</option>
+        <option value="page" ${type==="page"?"selected":""}>Page in SIte</option>
+        <option value="url"  ${type==="url" ?"selected":""}>External URL</option>
+      </select>
+
+      <div id="btnLinkPageRow" style="margin-top:8px; ${type==="page"?"":"display:none;"}">
+        <div class="label">Target Page</div>
+        <select id="btnLinkPage">
+          <option value="">— Choose page —</option>
+          ${pageOpts}
+        </select>
+      </div>
+
+      <div id="btnLinkUrlRow" style="margin-top:8px; ${type==="url"?"":"display:none;"}">
+        <div class="label">URL</div>
+        <input id="btnLinkUrl" value="${escapeHtml(url)}" placeholder="https://example.com/path" />
+      </div>
+
+      <div class="smallhelp" style="margin-top:6px;">
+        In preview: page links navigate inside SIte; URL links open in a new tab.
+      </div>
+    `;
+  }
+
+  if(b.type==="embed"){
+    ensureTranslationMap(b);
+    const val=getText(b,lang);
+    html+=`
+      <div class="label" style="margin-top:12px;">Embed HTML (${lang.toUpperCase()})</div>
+      <textarea id="txtEmbed">${escapeHtmlForTextarea(val)}</textarea>
+      <div class="smallhelp" style="margin-top:6px;">
+        Paste safe HTML. Scripts may be blocked by some sandboxes.
+      </div>
+    `;
+  }
+
+  if(b.type==="image"){
+    const url=b.src||"";
+    const st=b.style||{};
+    const filters=st.filters||{};
+    const br = typeof filters.brightness==="number"?filters.brightness:1;
+    const ct = typeof filters.contrast==="number"?filters.contrast:1;
+    const sa = typeof filters.saturate==="number"?filters.saturate:1;
+
+    html+=`
+      <div class="label" style="margin-top:12px;">Image URL</div>
+      <input id="imgUrl" value="${escapeHtml(url)}" placeholder="https://..." ${canEditStructure?"":"disabled"} />
+      <div class="row2" style="margin-top:10px;">
+        <button id="btnImgApply" class="secondary small" ${canEditStructure?"":"disabled"}>Apply URL</button>
+        <button id="btnImgUpload" class="secondary small" ${canEditStructure?"":"disabled"}>Upload + Convert</button>
+      </div>
+      <input id="imgFile" type="file" accept="image/*" style="display:none" />
+
+      <div class="label" style="margin-top:14px;">Brightness</div>
+      <input type="range" id="imgBright" min="0.3" max="1.7" step="0.05" value="${br}" />
+      <div class="smallhelp">Current: <span id="imgBrightVal">${br.toFixed(2)}</span></div>
+
+      <div class="label" style="margin-top:10px;">Contrast</div>
+      <input type="range" id="imgContrast" min="0.3" max="1.7" step="0.05" value="${ct}" />
+      <div class="smallhelp">Current: <span id="imgContrastVal">${ct.toFixed(2)}</span></div>
+
+      <div class="label" style="margin-top:10px;">Saturation</div>
+      <input type="range" id="imgSaturate" min="0" max="2" step="0.05" value="${sa}" />
+      <div class="smallhelp">Current: <span id="imgSaturateVal">${sa.toFixed(2)}</span></div>
+
+      <div class="smallhelp" style="margin-top:8px;">
+        These sliders approximate saturation, brightness, contrast.
+      </div>
+    `;
+  }
+
+  if(b.type==="section"){
+    const st=b.style||{};
+    const c=st.bgColor||"#ffffff";
+    const pad=typeof st.padding==="number"?st.padding:22;
+    ensureTranslationMap(b);
+    const secVal=getText(b,lang);
+
+    html+=`
+      <div class="label" style="margin-top:12px;">Section Text (${lang.toUpperCase()})</div>
+      <textarea id="sectionText">${escapeHtmlForTextarea(secVal)}</textarea>
+
+      <div class="label" style="margin-top:12px;">Section Background</div>
+      <input type="color" id="sectionBgColor" value="${c}" />
+
+      <div class="label" style="margin-top:10px;">Section Padding</div>
+      <input type="range" id="sectionPadding" min="0" max="80" value="${pad}" />
+      <div class="smallhelp">Padding: <span id="sectionPaddingValue">${pad}</span> px</div>
+
+      <div class="smallhelp" style="margin-top:10px;">
+        Sections can act as full-width bands with their own text.
+      </div>
+      <div class="row2" style="margin-top:10px;">
+        <button id="btnInsertSectionAbove" class="secondary small" ${canEditStructure?"":"disabled"}>Insert Section Above</button>
+        <button id="btnInsertSectionBelow" class="secondary small" ${canEditStructure?"":"disabled"}>Insert Section Below</button>
+      </div>
+    `;
+  }
+
+  html+=`
+    <hr>
+    <div class="row2">
+      <button id="btnDup" class="secondary small" ${canEditStructure?"":"disabled"}>Duplicate</button>
+      <button id="btnDel" class="secondary small" ${canEditStructure?"":"disabled"}>Delete</button>
+    </div>
+  `;
+
+  ins.innerHTML=html;
+  wireInspectorBase();
+  wireInspectorSelected();
+}
+
+function wireInspectorBase(){
+  $("btnLockPage")?.addEventListener("click",()=>{
+    currentPage.locked=!currentPage.locked;
+    saveSiteDebounced();
+    render();
+    setStatus(currentPage.locked?"Page locked.":"Page unlocked.","ok");
+  });
+  $("btnRenamePage")?.addEventListener("click",()=>{
+    const name=prompt("Page name:",currentPage.title);
+    if(!name) return;
+    currentPage.title=name.trim().slice(0,80)||currentPage.title;
+    saveSiteDebounced();
+    render();
+    setStatus("Page renamed.","ok");
+  });
+  $("insLang")?.addEventListener("change",e=>setLang(e.target.value));
+
+  $("pageBgColor")?.addEventListener("input",e=>{
+    currentPage.bgColor=e.target.value||"#ffffff";
+    saveSiteDebounced();
+    applyPageStyles();
+    setStatus("Page background color updated.","ok");
+  });
+  $("btnApplyPageBg")?.addEventListener("click",()=>{
+    const input=$("pageBgImage");
+    if(!input) return;
+    currentPage.bgImage=input.value.trim();
+    saveSiteDebounced();
+    applyPageStyles();
+    setStatus("Page background updated.","ok");
+  });
+  const bgImgInput=$("pageBgImage");
+  if(bgImgInput){
+    bgImgInput.addEventListener("keydown",e=>{
+      if(e.key==="Enter"){
+        e.preventDefault();
+        $("btnApplyPageBg").click();
+      }
+    });
+  }
+
+  document.querySelectorAll("[data-select]").forEach(row=>{
+    row.addEventListener("click",()=>{
+      selectedBlockId=row.getAttribute("data-select");
+      renderInspector();
+      highlightSelection();
+    });
+  });
+  document.querySelectorAll("[data-up]").forEach(btn=>{
+    btn.addEventListener("click",e=>{
+      e.stopPropagation();
+      moveBlock(btn.getAttribute("data-up"),-1);
+    });
+  });
+  document.querySelectorAll("[data-dn]").forEach(btn=>{
+    btn.addEventListener("click",e=>{
+      e.stopPropagation();
+      moveBlock(btn.getAttribute("data-dn"),+1);
+    });
+  });
+}
+
+function wireInspectorSelected(){
+  const b=selectedBlock();
+  if(!b) return;
+  const lang=getLang();
+
+  $("btnMoveUp")?.addEventListener("click",()=>moveBlock(b.id,-1));
+  $("btnMoveDn")?.addEventListener("click",()=>moveBlock(b.id,+1));
+
+  $("btnInsertSectionAbove")?.addEventListener("click",()=>insertSectionRelative(b.id,-1));
+  $("btnInsertSectionBelow")?.addEventListener("click",()=>insertSectionRelative(b.id,+1));
+
+  $("chkFreePos")?.addEventListener("change",e=>{
+    if(currentPage.locked){ e.preventDefault(); return; }
+    if(e.target.checked){
+      ensurePos(b);
+      saveSiteDebounced();
+      renderCanvas();
+      renderInspector();
+      highlightSelection();
+      setStatus("Free positioning enabled.","ok");
+    }else{
+      delete b.pos;
+      saveSiteDebounced();
+      renderCanvas();
+      renderInspector();
+      highlightSelection();
+      setStatus("Free positioning disabled (block returns to flow).","ok");
+    }
+  });
+
+  const txt=$("txtValue");
+  if(txt){
+    txt.addEventListener("input",()=>{
+      ensureTranslationMap(b);
+      b.t[lang]=txt.value;
+      saveSiteDebounced();
+      patchBlockContent(b);
+    });
+  }
+
+  const fs=$("fontSizeSlider");
+  if(fs){
+    fs.addEventListener("input",e=>{
+      const size=parseInt(e.target.value,10)||16;
+      b.style=b.style||{};
+      b.style.fontSize=size;
+      saveSiteDebounced();
+      const lbl=$("fontSizeValue");
+      if(lbl) lbl.textContent=size;
+      patchBlockStyle(b);
+    });
+  }
+
+  const fc=$("fontColorInput");
+  if(fc){
+    fc.addEventListener("input",e=>{
+      b.style=b.style||{};
+      b.style.color=e.target.value;
+      saveSiteDebounced();
+      patchBlockStyle(b);
+    });
+  }
+
+  const bgc=$("bgColorInput");
+  if(bgc){
+    bgc.addEventListener("input",e=>{
+      b.style=b.style||{};
+      b.style.bgColor=e.target.value;
+      saveSiteDebounced();
+      patchBlockStyle(b);
+    });
+  }
+
+  const ff=$("fontFamilyInput");
+  if(ff){
+    ff.addEventListener("blur",()=>{
+      b.style=b.style||{};
+      b.style.fontFamily=ff.value.trim();
+      saveSiteDebounced();
+      patchBlockStyle(b);
+    });
+  }
+  const fsSel=$("fontFamilySelect");
+  if(fsSel){
+    fsSel.addEventListener("change",()=>{
+      const val=fsSel.value;
+      if(!val) return;
+      b.style=b.style||{};
+      b.style.fontFamily=val;
+      if(ff) ff.value=val;
+      saveSiteDebounced();
+      patchBlockStyle(b);
+    });
+  }
+
+  if(b.type==="button"){
+    const linkTypeEl=$("btnLinkType");
+    const pageRow=$("btnLinkPageRow");
+    const urlRow=$("btnLinkUrlRow");
+    const pageSel=$("btnLinkPage");
+    const urlInput=$("btnLinkUrl");
+
+    function syncVis(){
+      if(!linkTypeEl) return;
+      const t=linkTypeEl.value;
+      if(pageRow) pageRow.style.display=t==="page"?"block":"none";
+      if(urlRow)  urlRow.style.display =t==="url" ?"block":"none";
+    }
+
+    if(linkTypeEl){
+      linkTypeEl.addEventListener("change",()=>{
+        const t=linkTypeEl.value;
+        b.link=b.link||{};
+        b.link.type=t;
+        if(t!=="page") b.link.pageId=null;
+        if(t!=="url")  b.link.url="";
+        saveSiteDebounced();
+        syncVis();
+      });
+    }
+    if(pageSel){
+      pageSel.addEventListener("change",()=>{
+        b.link=b.link||{};
+        b.link.type="page";
+        b.link.pageId=pageSel.value||null;
+        saveSiteDebounced();
+      });
+    }
+    if(urlInput){
+      urlInput.addEventListener("input",()=>{
+        b.link=b.link||{};
+        b.link.type="url";
+        b.link.url=urlInput.value.trim();
+        saveSiteDebounced();
+      });
+    }
+    syncVis();
+  }
+
+  const emb=$("txtEmbed");
+  if(emb){
+    emb.addEventListener("input",()=>{
+      ensureTranslationMap(b);
+      b.t[lang]=emb.value;
+      saveSiteDebounced();
+      patchBlockContent(b);
+    });
+  }
+
+  $("btnImgApply")?.addEventListener("click",()=>{
+    if(currentPage.locked) return;
+    const url=$("imgUrl").value.trim();
+    b.src=url;
+    saveSiteDebounced();
+    patchBlockContent(b);
+    setStatus("Image URL applied.","ok");
+  });
+
+  $("btnImgUpload")?.addEventListener("click",()=>{
+    if(currentPage.locked) return;
+    $("imgFile").click();
+  });
+  $("imgFile")?.addEventListener("change",async e=>{
+    if(currentPage.locked) return;
+    const file=e.target.files && e.target.files[0];
+    if(!file) return;
+    setStatus("Converting image…","warn");
+    try{
+      const dataUrl=await convertImageToJpegDataUrl(file,1400,0.86);
+      b.src=dataUrl;
+      ensurePos(b);
+      saveSiteDebounced();
+      renderCanvas();
+      renderInspector();
+      setStatus("Image uploaded + converted.","ok");
+    }catch(err){
+      setStatus("Image conversion failed.","bad");
+    }
+    e.target.value="";
+  });
+
+  const imgBright = $("imgBright");
+  const imgContrast = $("imgContrast");
+  const imgSaturate = $("imgSaturate");
+  if(imgBright){
+    imgBright.addEventListener("input",e=>{
+      const v=parseFloat(e.target.value)||1;
+      b.style=b.style||{};
+      b.style.filters=b.style.filters||{};
+      b.style.filters.brightness=v;
+      saveSiteDebounced();
+      const lbl=$("imgBrightVal");
+      if(lbl) lbl.textContent=v.toFixed(2);
+      patchBlockStyle(b);
+    });
+  }
+  if(imgContrast){
+    imgContrast.addEventListener("input",e=>{
+      const v=parseFloat(e.target.value)||1;
+      b.style=b.style||{};
+      b.style.filters=b.style.filters||{};
+      b.style.filters.contrast=v;
+      saveSiteDebounced();
+      const lbl=$("imgContrastVal");
+      if(lbl) lbl.textContent=v.toFixed(2);
+      patchBlockStyle(b);
+    });
+  }
+  if(imgSaturate){
+    imgSaturate.addEventListener("input",e=>{
+      const v=parseFloat(e.target.value)||1;
+      b.style=b.style||{};
+      b.style.filters=b.style.filters||{};
+      b.style.filters.saturate=v;
+      saveSiteDebounced();
+      const lbl=$("imgSaturateVal");
+      if(lbl) lbl.textContent=v.toFixed(2);
+      patchBlockStyle(b);
+    });
+  }
+
+  if(b.type==="section"){
+    const secTxt=$("sectionText");
+    if(secTxt){
+      secTxt.addEventListener("input",()=>{
+        ensureTranslationMap(b);
+        b.t[lang]=secTxt.value;
+        saveSiteDebounced();
+        patchBlockContent(b);
+      });
+    }
+
+    const secBg=$("sectionBgColor");
+    if(secBg){
+      secBg.addEventListener("input",e=>{
+        b.style=b.style||{};
+        b.style.bgColor=e.target.value;
+        saveSiteDebounced();
+        patchBlockStyle(b);
+      });
+    }
+    const secPad=$("sectionPadding");
+    if(secPad){
+      secPad.addEventListener("input",e=>{
+        const val=parseInt(e.target.value,10)||0;
+        b.style=b.style||{};
+        b.style.padding=val;
+        saveSiteDebounced();
+        const lbl=$("sectionPaddingValue");
+        if(lbl) lbl.textContent=val;
+        patchBlockStyle(b);
+      });
+    }
+  }
+
+  document.querySelectorAll(".alignBtn").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const val=btn.getAttribute("data-align")||"left";
+      b.style=b.style||{};
+      b.style.textAlign=val;
+      saveSiteDebounced();
+      patchBlockStyle(b);
+      document.querySelectorAll(".alignBtn").forEach(x=>x.classList.remove("alignActive"));
+      btn.classList.add("alignActive");
+    });
+  });
+
+  $("btnDup")?.addEventListener("click",()=>{
+    if(currentPage.locked) return;
+    const clone=deepClone(b);
+    clone.id=uid();
+    currentPage.blocks.splice(currentPage.blocks.findIndex(x=>x.id===b.id)+1,0,clone);
+    selectedBlockId=clone.id;
+    saveSiteDebounced();
+    render();
+    setStatus("Duplicated.","ok");
+  });
+  $("btnDel")?.addEventListener("click",()=>{
+    if(currentPage.locked) return;
+    const idx=currentPage.blocks.findIndex(x=>x.id===b.id);
+    if(idx<0) return;
+    currentPage.blocks.splice(idx,1);
+    selectedBlockId=null;
+    saveSiteDebounced();
+    render();
+    setStatus("Deleted.","ok");
+  });
+}
+
+function patchBlockContent(b){
+  const lang=getLang();
+  const el=blockDom(b.id);
+  if(!el) return;
+  const inner=el.classList.contains("freeWrap")
+    ? el.querySelector(".freeInner")
+    : el;
+
+  if(b.type==="text"){
+    ensureTranslationMap(b);
+    inner.textContent=getText(b,lang);
+    patchBlockStyle(b);
+  }else if(b.type==="button"){
+    ensureTranslationMap(b);
+    const btn=inner.querySelector("button") || (()=>{ const x=document.createElement("button"); inner.innerHTML=""; inner.appendChild(x); return x; })();
+    btn.textContent=getText(b,lang);
+    patchBlockStyle(b);
+  }else if(b.type==="embed"){
+    ensureTranslationMap(b);
+    inner.innerHTML=getText(b,lang);
+  }else if(b.type==="image"){
+    const img=inner.querySelector("img") || document.createElement("img");
+    img.src=b.src||"https://via.placeholder.com/900x260";
+    if(el.classList.contains("freeWrap")){
+      inner.style.padding="0";
+      img.style.width="100%";
+      img.style.height="100%";
+      img.style.objectFit="cover";
+      img.style.borderRadius="12px";
+    }else{
+      img.style.maxWidth="100%";
+      img.style.borderRadius="12px";
+    }
+    if(!img.parentNode) inner.appendChild(img);
+    patchBlockStyle(b);
+  }else if(b.type==="section"){
+    ensureTranslationMap(b);
+    inner.textContent=getText(b,lang);
+    patchBlockStyle(b);
+  }
+
+  renderTopBadges();
+}
+
+/* =========================
+   Block operations
+   ========================= */
+function moveBlock(id,dir){
+  if(currentPage.locked){ setStatus("Page is locked.","bad"); return; }
+  const i=currentPage.blocks.findIndex(b=>b.id===id);
+  if(i<0) return;
+  const j=i+dir;
+  if(j<0||j>=currentPage.blocks.length) return;
+  const tmp=currentPage.blocks[i];
+  currentPage.blocks[i]=currentPage.blocks[j];
+  currentPage.blocks[j]=tmp;
+  saveSiteDebounced();
+  render();
+  setStatus("Reordered.","ok");
+}
+function insertSectionRelative(baseId,offset){
+  if(currentPage.locked){ setStatus("Page is locked.","bad"); return; }
+  const idx=currentPage.blocks.findIndex(b=>b.id===baseId);
+  if(idx<0) return;
+  const insertAt=Math.max(0,Math.min(currentPage.blocks.length,idx+(offset<0?0:1)));
+  const sec={id:uid(),type:"section",style:{bgColor:"#ffffff",padding:22},t:{}};
+  currentPage.blocks.splice(insertAt,0,sec);
+  selectedBlockId=sec.id;
+  saveSiteDebounced();
+  render();
+  setStatus("Section inserted.","ok");
+}
+
+/* =========================
+   Image convert tool
+   ========================= */
+function fileToDataURL(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload =()=>res(r.result);
+    r.onerror=rej;
+    r.readAsDataURL(file);
+  });
+}
+function loadImage(src){
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    img.onload =()=>res(img);
+    img.onerror=rej;
+    img.src=src;
+  });
+}
+async function convertImageToJpegDataUrl(file,maxW=1400,quality=0.86){
+  const dataUrl=await fileToDataURL(file);
+  const img=await loadImage(dataUrl);
+  const ratio=img.width/img.height;
+  let w=img.width,h=img.height;
+  if(w>maxW){ w=maxW; h=Math.round(w/ratio); }
+  const canvas=document.createElement("canvas");
+  canvas.width=w; canvas.height=h;
+  const ctx=canvas.getContext("2d");
+  ctx.drawImage(img,0,0,w,h);
+  return canvas.toDataURL("image/jpeg",quality);
+}
+
+/* =========================
+   Domains
+   ========================= */
+function syncDomainInputs(){
+  $("primaryDomain").value = site.domains.primary || "";
+  $("aliasDomains").value = (site.domains.aliases||[]).join("\n");
+  $("liveUrl").value = site.domains.liveUrl || "";
+}
+$("btnSaveDomains").addEventListener("click",()=>{
+  site.domains.primary = $("primaryDomain").value.trim() || site.domains.primary;
+  site.domains.aliases = $("aliasDomains").value.split("\n").map(s=>s.trim()).filter(Boolean);
+  site.domains.liveUrl = $("liveUrl").value.trim();
+  saveSiteDebounced();
+  setStatus("Domain info saved (metadata only).","ok");
+});
+
+/* =========================
+   Add Page / Add Blocks
+   ========================= */
+$("btnAddPage").addEventListener("click",()=>{
+  const title=prompt("New page name:","New Page");
+  if(!title) return;
+  const p={
+    id:uid(),
+    title:title.trim().slice(0,80),
+    locked:false,
+    bgColor:"#ffffff",
+    bgImage:"",
+    blocks:[]
+  };
+  site.pages.push(p);
+  currentPage=p;
+  selectedBlockId=null;
+  saveSiteDebounced();
+  render();
+  setStatus("Page added.","ok");
+});
+
+function addBlock(type){
+  if(currentPage.locked){ setStatus("Page is locked.","bad"); return; }
+  const b={id:uid(),type};
+  const defLang=site.languages.default;
+  const basePos={x:60,y:80,w:320,h:120};
+
+  if(type==="text"){
+    b.t={[defLang]:"New text"};
+    b.pos=deepClone(basePos);               // free by default
+  }
+  if(type==="button"){
+    b.t={[defLang]:"Button"};
+    b.pos=deepClone({x:60,y:80,w:160,h:56}); // free by default
+  }
+  if(type==="embed"){
+    b.t={[defLang]:"<div style='padding:12px;border:1px solid #ddd;border-radius:12px;'>Embed HTML</div>"};
+    b.pos=deepClone({x:80,y:120,w:420,h:260}); // free by default
+  }
+  if(type==="image"){
+    b.src="";
+    b.pos={x:60,y:80,w:320,h:220};          // was already free; keep
+    b.style={filters:{brightness:1,contrast:1,saturate:1}};
+  }
+  if(type==="section"){
+    b.style={bgColor:"#ffffff",padding:22};
+    b.t={[defLang]:"Section text"};
+    // sections stay in flow by default; you can turn on Free Positioning in Inspector
+  }
+  currentPage.blocks.push(b);
+  selectedBlockId=b.id;
+  saveSiteDebounced();
+  render();
+  setStatus(type.toUpperCase()+" added.","ok");
+}
+$("btnAddSection").addEventListener("click",()=>addBlock("section"));
+$("btnAddText").addEventListener("click",()=>addBlock("text"));
+$("btnAddImage").addEventListener("click",()=>addBlock("image"));
+$("btnAddEmbed").addEventListener("click",()=>addBlock("embed"));
+
+/* =========================
+   Languages add/remove
+   ========================= */
+$("btnLangAdd").addEventListener("click",()=>{
+  const code=$("langCode").value.trim().toLowerCase();
+  const name=$("langName").value.trim();
+  if(!code||!name){ setStatus("Enter code + name.","bad"); return; }
+  if(!/^[a-z]{2,5}$/.test(code)){ setStatus("Code must be 2–5 letters.","bad"); return; }
+  if(site.languages.list.some(l=>l.code===code)){ setStatus("Language already exists.","bad"); return; }
+
+  site.languages.list.push({code,name});
+  const defCode=site.languages.default;
+  site.pages.forEach(p=>{
+    p.blocks.forEach(b=>{
+      if(b.t && typeof b.t[defCode]==="string"){
+        if(!b.t[code] || b.t[code].trim()===""){
+          b.t[code]=b.t[defCode];
+        }
+      }
+    });
+  });
+
+  saveSiteDebounced();
+  $("langCode").value="";
+  $("langName").value="";
+  setLang(code);
+  setStatus("Language added & activated.","ok");
+});
+
+$("btnLangRemove").addEventListener("click",()=>{
+  const active=getLang();
+  if(active===site.languages.default){ setStatus("Can't remove default language.","bad"); return; }
+  site.languages.list=site.languages.list.filter(l=>l.code!==active);
+  site.languages.active=site.languages.default;
+  saveSiteDebounced();
+  render();
+  setStatus("Active language removed. Returned to default.","ok");
+});
+
+/* =========================
+   Export / Reset
+   ========================= */
+$("btnExport").addEventListener("click",()=>{
+  const data=JSON.stringify(site,null,2);
+  try{
+    navigator.clipboard.writeText(data);
+    setStatus("Export copied to clipboard.","ok");
+  }catch(e){
+    setStatus("Clipboard blocked. Showing export…","warn");
+    prompt("Copy JSON:",data);
+  }
+});
+$("btnReset").addEventListener("click",()=>{
+  const ok=confirm("Reset SIte Alpha (local) data? This cannot be undone.");
+  if(!ok) return;
+  try{ store.removeItem(STORAGE_KEY); }catch(e){}
+  site=deepClone(DEFAULT_SITE);
+  currentPage=site.pages[0];
+  selectedBlockId=null;
+  saveSiteDebounced();
+  render();
+  setStatus("Reset complete.","ok");
+});
+
+/* =========================
+   Page styles & Preview mode
+   ========================= */
+function applyPageStyles(){
+  const pageEl=$("pageCanvas");
+  if(!pageEl) return;
+  const bgColor=currentPage.bgColor||"#ffffff";
+  const bgImage=currentPage.bgImage||"";
+  pageEl.style.backgroundColor=bgColor;
+  if(bgImage){
+    pageEl.style.backgroundImage=`url(${bgImage})`;
+    pageEl.style.backgroundSize="cover";
+    pageEl.style.backgroundPosition="center center";
+  }else{
+    pageEl.style.backgroundImage="none";
+  }
+}
+
+$("btnPreview").addEventListener("click",()=>{
+  if(viewMode==="admin"){
+    viewMode="preview";
+    document.body.classList.add("preview");
+    $("btnPreview").textContent="Back to Admin";
+    setStatus("Preview view (public screen).","ok");
+  }else{
+    viewMode="admin";
+    document.body.classList.remove("preview");
+    $("btnPreview").textContent="Preview View";
+    setStatus("Admin view restored.","ok");
+  }
+});
+
+/* =========================
+   Button Palette
+   ========================= */
+function openButtonPalette(){ $("buttonPalette").classList.remove("hidden"); }
+function closeButtonPalette(){ $("buttonPalette").classList.add("hidden"); }
+
+function createButtonFromPalette(kind){
+  if(currentPage.locked){
+    setStatus("Page is locked.","bad");
+    return;
+  }
+  const defLang=site.languages.default;
+  const basePos={x:40,y:60,w:140,h:48};
+  const blocksToAdd=[];
+
+  if(kind==="plain"){
+    const b={id:uid(), type:"button", t:{[defLang]:"Button"}, style:{fontSize:18,bgColor:"#ffffff"}, pos:deepClone(basePos)};
+    blocksToAdd.push(b);
+  }else if(kind==="emoji-star"){
+    const b={id:uid(), type:"button", t:{[defLang]:"⭐"}, style:{fontSize:28,bgColor:"#ffffff"}, pos:deepClone(basePos)};
+    blocksToAdd.push(b);
+  }else if(kind==="emoji-heart"){
+    const b={id:uid(), type:"button", t:{[defLang]:"❤️"}, style:{fontSize:28,bgColor:"#ffffff"}, pos:deepClone(basePos)};
+    blocksToAdd.push(b);
+  }else if(kind==="top"){
+    const b={id:uid(), type:"button", t:{[defLang]:"↑ Top"}, style:{fontSize:16,bgColor:"#ffffff"}, pos:deepClone(basePos), link:{type:"url",url:"#top"}};
+    blocksToAdd.push(b);
+  }else if(kind==="home"){
+    const b={id:uid(), type:"button", t:{[defLang]:"⌂ Home"}, style:{fontSize:18,bgColor:"#ffffff"}, pos:deepClone(basePos)};
+    blocksToAdd.push(b);
+  }else if(kind==="social-row"){
+    const icons=[
+      {label:"📘", url:"https://facebook.com"},
+      {label:"📸", url:"https://instagram.com"},
+      {label:"▶️", url:"https://youtube.com"}
+    ];
+    icons.forEach((icon,idx)=>{
+      const pos=deepClone(basePos);
+      pos.x += idx*70;
+      const b={id:uid(), type:"button", t:{[defLang]:icon.label}, style:{fontSize:24,bgColor:"#ffffff"}, pos};
+      b.link={type:"url", url:icon.url};
+      blocksToAdd.push(b);
+    });
+  }else{
+    const b={id:uid(), type:"button", t:{[defLang]:"Button"}, style:{fontSize:18,bgColor:"#ffffff"}, pos:deepClone(basePos)};
+    blocksToAdd.push(b);
+  }
+
+  blocksToAdd.forEach(b=>currentPage.blocks.push(b));
+  const last=blocksToAdd[blocksToAdd.length-1];
+  selectedBlockId=last.id;
+  saveSiteDebounced();
+  render();
+  setStatus("Button added.","ok");
+}
+
+$("btnAddButton").addEventListener("click",openButtonPalette);
+$("btnPaletteClose").addEventListener("click",closeButtonPalette);
+$("buttonPalette").addEventListener("click",e=>{
+  if(e.target.id==="buttonPalette") closeButtonPalette();
+});
+document.querySelectorAll(".palette-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    const kind=btn.getAttribute("data-kind");
+    closeButtonPalette();
+    createButtonFromPalette(kind);
+  });
+});
+
+/* =========================
+   Initial render
+   ========================= */
+function render(){
+  renderTopBadges();
+  renderPages();
+  renderLangs();
+  renderCanvas();
+  renderInspector();
+  syncDomainInputs();
+}
+
+authInit();
+render();
+</script>
+</body>
+</html>
